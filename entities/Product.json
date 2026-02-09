@@ -1,0 +1,69 @@
+{
+    "name": "Product",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Nome del prodotto"
+      },
+      "category": {
+        "type": "string",
+        "enum": [
+          "frigo",
+          "dispensa",
+          "freezer"
+        ],
+        "description": "Categoria di conservazione"
+      },
+      "subcategory": {
+        "type": "string",
+        "description": "Sottocategoria (es. Latticini, Verdura)"
+      },
+      "quantity": {
+        "type": "number",
+        "description": "Quantit\u00e0 disponibile"
+      },
+      "unit": {
+        "type": "string",
+        "description": "Unit\u00e0 di misura"
+      },
+      "expiry_date": {
+        "type": "string",
+        "format": "date",
+        "description": "Data di scadenza"
+      },
+      "purchase_date": {
+        "type": "string",
+        "format": "date",
+        "description": "Data di acquisto"
+      },
+      "price": {
+        "type": "number",
+        "description": "Prezzo"
+      },
+      "owner": {
+        "type": "string",
+        "enum": [
+          "mari",
+          "gio",
+          "pile",
+          "shared"
+        ],
+        "description": "Proprietario del prodotto"
+      },
+      "icon": {
+        "type": "string",
+        "description": "Emoji o icona del prodotto"
+      },
+      "is_leftover": {
+        "type": "boolean",
+        "default": false,
+        "description": "Se \u00e8 un avanzo"
+      }
+    },
+    "required": [
+      "name",
+      "category",
+      "owner"
+    ]
+  }

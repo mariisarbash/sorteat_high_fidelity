@@ -1,0 +1,50 @@
+{
+    "name": "ShoppingItem",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Nome del prodotto"
+      },
+      "department": {
+        "type": "string",
+        "enum": [
+          "ortofrutta",
+          "freschi",
+          "dispensa",
+          "casa"
+        ],
+        "description": "Reparto del supermercato"
+      },
+      "quantity": {
+        "type": "number",
+        "description": "Quantit\u00e0 da acquistare"
+      },
+      "unit": {
+        "type": "string",
+        "description": "Unit\u00e0 di misura"
+      },
+      "added_by": {
+        "type": "string",
+        "description": "Chi ha aggiunto l'item"
+      },
+      "is_checked": {
+        "type": "boolean",
+        "default": false,
+        "description": "Se \u00e8 stato acquistato"
+      },
+      "has_warning": {
+        "type": "boolean",
+        "default": false,
+        "description": "Se ha un warning allergie"
+      },
+      "icon": {
+        "type": "string",
+        "description": "Emoji del prodotto"
+      }
+    },
+    "required": [
+      "name",
+      "department"
+    ]
+  }

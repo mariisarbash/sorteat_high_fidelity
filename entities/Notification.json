@@ -1,0 +1,42 @@
+{
+    "name": "Notification",
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "Titolo della notifica"
+      },
+      "message": {
+        "type": "string",
+        "description": "Messaggio della notifica"
+      },
+      "type": {
+        "type": "string",
+        "enum": [
+          "activity",
+          "expiry",
+          "shopping",
+          "debt"
+        ],
+        "description": "Tipo di notifica"
+      },
+      "is_read": {
+        "type": "boolean",
+        "default": false,
+        "description": "Se \u00e8 stata letta"
+      },
+      "related_user": {
+        "type": "string",
+        "description": "Utente correlato"
+      },
+      "icon": {
+        "type": "string",
+        "description": "Emoji della notifica"
+      }
+    },
+    "required": [
+      "title",
+      "message",
+      "type"
+    ]
+  }

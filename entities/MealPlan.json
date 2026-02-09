@@ -1,0 +1,58 @@
+{
+    "name": "MealPlan",
+    "type": "object",
+    "properties": {
+      "date": {
+        "type": "string",
+        "format": "date",
+        "description": "Data del pasto"
+      },
+      "meal_type": {
+        "type": "string",
+        "enum": [
+          "colazione",
+          "pranzo",
+          "cena",
+          "snack"
+        ],
+        "description": "Tipo di pasto"
+      },
+      "recipe_name": {
+        "type": "string",
+        "description": "Nome della ricetta"
+      },
+      "chef": {
+        "type": "string",
+        "description": "Chi cucina"
+      },
+      "participants": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Chi partecipa al pasto"
+      },
+      "servings": {
+        "type": "number",
+        "description": "Numero di porzioni"
+      },
+      "is_leftover": {
+        "type": "boolean",
+        "default": false,
+        "description": "Se \u00e8 un avanzo"
+      },
+      "is_confirmed": {
+        "type": "boolean",
+        "default": false,
+        "description": "Se \u00e8 confermato"
+      },
+      "icon": {
+        "type": "string",
+        "description": "Emoji della ricetta"
+      }
+    },
+    "required": [
+      "date",
+      "meal_type"
+    ]
+  }
