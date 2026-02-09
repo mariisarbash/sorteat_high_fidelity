@@ -32,7 +32,8 @@ const getExpiryColor = (daysLeft) => {
   if (daysLeft === null) return 'text-[#666666]';
   if (daysLeft <= 0) return 'text-red-600';
   if (daysLeft <= 1) return 'text-red-500';
-  if (daysLeft <= 3) return 'text-[#D4A373]';
+  if (daysLeft <= 2) return 'text-orange-500';
+  if (daysLeft <= 3) return 'text-yellow-600';
   return 'text-[#666666]';
 };
 

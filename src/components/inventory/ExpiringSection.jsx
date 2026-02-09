@@ -20,7 +20,7 @@ export default function ExpiringSection({ products, onProductClick }) {
   const getExpiryColor = (days) => {
     if (days <= 0) return 'bg-red-500 text-white';
     if (days === 1) return 'bg-red-100 text-red-700';
-    if (days <= 2) return 'bg-[#D4A373]/20 text-[#D4A373]';
+    if (days <= 2) return 'bg-orange-100 text-orange-700';
     return 'bg-yellow-100 text-yellow-700';
   };
 
