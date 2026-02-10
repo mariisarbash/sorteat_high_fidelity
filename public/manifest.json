@@ -1,0 +1,16 @@
+{
+  "name": "Sorteat",
+  "short_name": "Sorteat",
+  "description": "Gestisci la tua dispensa e la lista della spesa",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F6F3",
+  "theme_color": "#3A5A40",
+  "icons": [
+    {
+      "src": "https://base44.com/logo_v2.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

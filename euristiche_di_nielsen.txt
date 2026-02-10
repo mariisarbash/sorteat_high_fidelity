@@ -1,0 +1,33 @@
+1. Visibilità dello stato del sistema
+L’utente deve sempre sentirsi al controllo della situazione: sapere in quale fase di un processo è coinvolto, cosa deve fare e quale risultato avranno le sue azioni. La parola chiave è “feedback”, il design deve informare il più possibile l’utente riguardo a quello che sta accadendo mentre interagisce con il sito web, l’app o più in generale con la user interface. Pensa a quanto è frustrante quando si clicca qualcosa e sembra non succedere niente!
+
+2. Corrispondenza tra il sistema e il mondo reale
+Il sistema dovrebbe comunicare all’utente in un modo familiare. Secondo questo principio, per ottenere una comunicazione semplice e intuitiva, il flusso dei processi dovrebbe essere riconducibile a metafore legate al mondo reale: un esempio è il cestino per “buttare via” i file. Questo principio è molto vicino al concetto di Mapping, esposto e ben spiegato nel libro “La caffettiera del masochista” di Donald Norman, di cui consiglio la lettura.
+
+3. Controllo e libertà dell’utente
+Un’ode a cmd+z (o ctrl+z). L’utente dovrebbe essere in grado di annullare facilmente gli errori e non trovarsi mai in situazioni irreversibili. Oltre a Cmd+z, altri esempi concreti dell’applicazione di questo principio sono la freccia per tornare indietro sul browser, il pulsante “annulla” nelle finestre di dialogo delle applicazioni, oppure, ancora una volta, il cestino del computer.
+
+4. Coerenza e standard
+All’interno di un sistema è necessario adottare un linguaggio coerente e prevedibile per l’utente: è per questo che la combinazione di tasti citata prima, cmd+z, si comporta allo stesso modo in tutte le applicazioni che girano sullo stesso OS.
+Inoltre, dove possibile, etichette e azioni dovrebbero seguire standard ben definiti, come ad esempio l’icona del campo di ricerca (lente d’ingrandimento stilizzata) e la paginazione dei carousel di immagini (i classici pallini): non ha senso stravolgere cose così riconoscibili, si rischia soltanto di creare confusione. Non reinventare la ruota!
+
+5. Prevenzione degli errori
+Uno UI design efficace previene la possibilità di commettere errori da parte dell’utente. In caso questo non sia possibile, è necessario che per le azioni critiche vengano chieste conferme e forniti aiuti per non incorrere in condizioni di errore.
+Un esempio interessante dell’applicazione di questo principio la si può trovare in Gmail che, in caso trovi la parola “allegato” all’interno di una email in bozza, verifica che effettivamente sia presente almeno un file: se questo non è presente, l’applicazione mostra un alert che avvisa l’utente dell’invio probabilmente incompleto della mail, chiedendo conferma.
+
+6. Riconoscimento piuttosto che richiamo
+Un’interfaccia efficace dovrebbe fare affidamento il meno possibile sulla memoria dell’utente, suggerendo possibilità e alleggerendo il carico mnemonico. Semplificando in maniera estrema è meglio far scegliere da una serie di risposte chiuse, piuttosto che fare una domanda a risposta aperta. L’autocomplete che si vede in molti sistemi di ricerca (Google in primis) è un esempio concreto di questo principio.
+
+7. Flessibilità ed efficienza d’uso
+La user interface dovrebbe essere fruibile su più livelli: dal livello di utilizzo più superficiale – adatto agli utenti principianti – fino ad arrivare ad un livello avanzato dove poter controllare tutti i parametri.
+Un esempio lampante è l’interfaccia di ricerca per immagini di Google: scrivendo nel box di ricerca avrò un’esperienza base ed otterrò risultati, mentre andando a scavare nei parametri aggiuntivi, disponibili nella SERP delle immagini, avrò modo di perfezionare la ricerca e scendere nei dettagli.
+
+8. Estetica e design minimalista
+Ovvero: “Less is more”. Ogni informazione presente in una user interface “compete” con qualche altra informazione, è quindi necessario chiedersi: gli elementi presenti sono tutti necessari, oppure è possibile nascondere qualcosa? Oltre ad includere solo ciò che è necessario, è necessario ragionare sulle priorità e distribuire funzioni ed informazioni all’interno di flussi. Un esempio di distribuzione delle informazioni basato sulla priorità è il classico link “scopri di più”, dove si rimandano i dettagli ad un livello successivo di navigazione.
+
+9. Aiutare gli utenti a riconoscere, diagnosticare e recuperare dagli errori
+E’ sempre necessario spiegare chiaramente gli errori, individuare il problema e offrire una soluzione. I messaggi di errore dovrebbero essere brevi chiari e specifici, senza codici poco comprensibili o frasi vaghe: l’obiettivo è quello di spiegare all’utente cosa sta succedendo, ed offrirgli una scappatoia o una via alternativa.
+All’interno di questa casistica rientrano anche, nonostante non siano situazioni di errore, i cosiddetti empty state, ovvero tutte quelle situazioni in cui l’interfaccia non mostra dati perchè ad esempio abbiamo appena iniziato ad utilizzare un’applicazione.
+
+10. Aiuto e documentazione
+Anche se sarebbe meglio non avere bisogno di documentazione, ci sono casi in cui un minimo di documentazione è necessaria: in questi casi dovrebbe essere facilmente riconoscibile e raggiungibile.

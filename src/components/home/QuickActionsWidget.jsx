@@ -27,7 +27,7 @@ export default function QuickActionsWidget() {
     if (type === 'debt') {
       toast.success('Funzionalità pagamento in arrivo!', { icon: '💸' });
     } else if (type === 'leftover') {
-      toast.success('Lasagne prenotate per te!', { icon: '🍝' });
+      toast.success('Funzionalità prenotazione pasti in arrivo!', { icon: '🍝' });
     }
   };
 

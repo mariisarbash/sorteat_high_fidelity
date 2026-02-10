@@ -12,9 +12,11 @@ import {
   Check,
   Calendar,
   DollarSign,
-  Package
+  Package,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWaste } from '@/context/WasteContext';
 
 // Funzione per calcolare i giorni alla scadenza
 const getDaysUntilExpiry = (expiryDate) => {
@@ -60,17 +62,20 @@ export default function ProductDetailModal({
   onClose, 
   product, 
   currentUser = 'mari',
-  onAddNotification 
+  onAddNotification,
+  onUpdateProduct,
+  onRemoveProduct
 }) {
+  const { registerWaste } = useWaste();
   const [isEditing, setIsEditing] = useState(false);
   const [quantity, setQuantity] = useState(0);
 
   // update quantity when product changes
-    React.useEffect(() => {
-        if (product) {
-        setQuantity(product.quantity || 0);
-        }
-    }, [product]);
+  React.useEffect(() => {
+    if (product) {
+      setQuantity(product.quantity || 0);
+    }
+  }, [product]);
 
   const [showAddToShoppingModal, setShowAddToShoppingModal] = useState(false);
   const [shoppingQuantity, setShoppingQuantity] = useState(1);
@@ -78,6 +83,14 @@ export default function ProductDetailModal({
   const [requestAmount, setRequestAmount] = useState('un po\'');
   const [isAIScanning, setIsAIScanning] = useState(false);
   const [showAIOverlay, setShowAIOverlay] = useState(false);
+  
+  // Stati per il modal "Consuma"
+  const [showConsumeModal, setShowConsumeModal] = useState(false);
+  const [consumeAmount, setConsumeAmount] = useState(1);
+  const [consumeAll, setConsumeAll] = useState(false);
+  
+  // Stato per il modal "Spreco/Rifiuto"
+  const [showWasteModal, setShowWasteModal] = useState(false);
 
   if (!product) return null;
 
@@ -90,14 +103,42 @@ export default function ProductDetailModal({
   const daysLeft = getDaysUntilExpiry(product.expiry_date);
   const expiryColor = getExpiryColor(daysLeft);
 
-  // Handler per consumare
-  const handleConsume = () => {
-    if (quantity > 0) {
-      setQuantity(prev => Math.max(0, prev - 1));
-      toast.success('Quantità aggiornata!', {
-        description: `${product.name}: ${quantity - 1} ${product.unit} rimanenti`
+  // Calcola la quantità rimanente per il modal consuma
+  const remainingAfterConsume = consumeAll ? 0 : Math.max(0, quantity - consumeAmount);
+
+  // Handler per aprire il modal consuma
+  const handleOpenConsumeModal = () => {
+    setConsumeAmount(1);
+    setConsumeAll(false);
+    setShowConsumeModal(true);
+  };
+
+  // Handler per confermare il consumo
+  const handleConfirmConsume = () => {
+    const newQuantity = consumeAll ? 0 : Math.max(0, quantity - consumeAmount);
+    
+    if (newQuantity === 0) {
+      // Rimuovi il prodotto
+      if (onRemoveProduct) {
+        onRemoveProduct(product.id);
+      }
+      toast.success(`${product.name} terminato!`, {
+        description: 'Prodotto rimosso dall\'inventario',
+        icon: '✅'
+      });
+    } else {
+      // Aggiorna la quantità
+      if (onUpdateProduct) {
+        onUpdateProduct(product.id, newQuantity);
+      }
+      setQuantity(newQuantity);
+      toast.success(`${product.name} consumato!`, {
+        description: `Rimangono ${newQuantity} ${product.unit}`,
+        icon: '✅'
       });
     }
+    
+    setShowConsumeModal(false);
   };
 
   // Handler per aggiungere alla spesa
@@ -144,13 +185,44 @@ export default function ProductDetailModal({
       setTimeout(() => {
         setShowAIOverlay(false);
         const newQuantity = Math.round(quantity * 0.5);
+        
+        // Aggiorna nell'inventario principale
+        if (onUpdateProduct) {
+          onUpdateProduct(product.id, newQuantity);
+        }
         setQuantity(newQuantity);
+        
         toast.success('Quantità aggiornata con AI!', {
-          description: `Rilevato 50% rimanente. Nuova quantità: ${newQuantity} ${product.unit}`,
+          description: `${product.name}: rilevato 50% rimanente. Nuova quantità: ${newQuantity} ${product.unit}`,
           icon: '🤖'
         });
       }, 500);
     }, 2500);
+  };
+
+  // Handler per confermare lo spreco
+  const handleConfirmWaste = () => {
+    // Calcola il valore sprecato (usa prezzo se disponibile, altrimenti stima)
+    const wastedValue = product.price || 2.50; // Valore stimato di default €2.50
+    
+    // Registra lo spreco nel contesto (resetta i giorni a 0)
+    registerWaste(product.name, wastedValue);
+    
+    // Rimuovi il prodotto
+    if (onRemoveProduct) {
+      onRemoveProduct(product.id);
+    }
+    
+    setShowWasteModal(false);
+    
+    toast('Prodotto spostato nei rifiuti 🗑️', {
+      description: `${product.name} - Spreco: €${wastedValue.toFixed(2)}`,
+      style: {
+        background: '#FEF3C7',
+        border: '1px solid #F59E0B',
+        color: '#92400E'
+      }
+    });
   };
 
   const requestAmountOptions = ['Un po\'', 'Metà', 'Tutto'];
@@ -178,13 +250,26 @@ export default function ProductDetailModal({
           >
             {/* Header con immagine prodotto */}
             <div className="relative bg-[#F2F0E9] pt-6 pb-4 px-5">
-              {/* Bottone chiudi */}
-              <button
-                onClick={onClose}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center active:scale-95 transition-transform z-10"
-              >
-                <X className="w-4 h-4 text-gray-600" />
-              </button>
+              {/* Bottoni header in alto a destra */}
+              <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                {/* Bottone Cestino (solo per prodotti propri/condivisi) */}
+                {canEdit && (
+                  <button
+                    onClick={() => setShowWasteModal(true)}
+                    className="w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center active:scale-95 transition-transform"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </button>
+                )}
+                
+                {/* Bottone chiudi */}
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center active:scale-95 transition-transform"
+                >
+                  <X className="w-4 h-4 text-gray-600" />
+                </button>
+              </div>
               
               {/* Badge proprietario per prodotti altrui */}
               {!canEdit && (
@@ -290,7 +375,7 @@ export default function ProductDetailModal({
                   {/* Bottoni azione principali */}
                   <div className="grid grid-cols-2 gap-3">
                     <button
-                      onClick={handleConsume}
+                      onClick={handleOpenConsumeModal}
                       className="flex items-center justify-center gap-2 py-4 bg-[#D4A373] text-white font-semibold rounded-2xl active:scale-[0.98] transition-transform"
                     >
                       <Minus className="w-5 h-5" />
@@ -330,6 +415,182 @@ export default function ProductDetailModal({
             </div>
           </motion.div>
           
+          {/* Sub-modal: Conferma Spreco */}
+          <AnimatePresence>
+            {showWasteModal && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/20 z-[60]"
+                  onClick={() => setShowWasteModal(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+                  onClick={() => setShowWasteModal(false)}
+                >
+                  <div 
+                    className="bg-white rounded-3xl p-5 max-w-sm w-full"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="text-center mb-4">
+                      <span className="text-5xl">🗑️</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-[#1A1A1A] mb-2 text-center">
+                      Peccato!
+                    </h3>
+                    <p className="text-sm text-[#666666] text-center mb-5">
+                      Stai buttando via <strong>{product.name}</strong>?
+                    </p>
+                    
+                    {/* Info spreco */}
+                    <div className="bg-orange-50 rounded-2xl p-4 mb-5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-orange-700">Quantità sprecata:</span>
+                        <span className="font-semibold text-orange-800">{quantity} {product.unit}</span>
+                      </div>
+                      {product.price && (
+                        <div className="flex items-center justify-between text-sm mt-2">
+                          <span className="text-orange-700">Valore stimato:</span>
+                          <span className="font-semibold text-orange-800">€{product.price.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setShowWasteModal(false)}
+                        className="py-3 bg-[#F2F0E9] text-[#1A1A1A] font-semibold rounded-2xl active:scale-[0.98] transition-transform"
+                      >
+                        Annulla
+                      </button>
+                      <button
+                        onClick={handleConfirmWaste}
+                        className="py-3 bg-red-500 text-white font-semibold rounded-2xl active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Conferma
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+          
+          {/* Sub-modal: Consuma prodotto */}
+          <AnimatePresence>
+            {showConsumeModal && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/20 z-[60]"
+                  onClick={() => setShowConsumeModal(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+                  onClick={() => setShowConsumeModal(false)}
+                >
+                  <div 
+                    className="bg-white rounded-3xl p-5 max-w-sm w-full"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3 className="text-lg font-bold text-[#1A1A1A] mb-2 text-center">
+                      Quanto ne hai consumato?
+                    </h3>
+                    <p className="text-sm text-[#666666] text-center mb-5">
+                      {product.name} - Disponibile: {quantity} {product.unit}
+                    </p>
+                    
+                    {/* Checkbox "Consumato tutto" */}
+                    <label className="flex items-center gap-3 mb-5 p-3 bg-[#F2F0E9] rounded-2xl cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={consumeAll}
+                        onChange={(e) => setConsumeAll(e.target.checked)}
+                        className="w-5 h-5 rounded border-gray-300 text-[#3A5A40] focus:ring-[#3A5A40]"
+                      />
+                      <span className="font-medium text-[#1A1A1A]">Ho consumato tutto</span>
+                    </label>
+                    
+                    {/* Input quantità (disabilitato se "consumato tutto") */}
+                    <div className={`transition-opacity ${consumeAll ? 'opacity-40 pointer-events-none' : ''}`}>
+                      <div className="flex items-center justify-center gap-3 mb-4">
+                        <button
+                          onClick={() => setConsumeAmount(Math.max(1, consumeAmount - 1))}
+                          disabled={consumeAll}
+                          className="w-12 h-12 rounded-full bg-[#F2F0E9] flex items-center justify-center active:scale-95 transition-transform"
+                        >
+                          <Minus className="w-5 h-5 text-[#1A1A1A]" />
+                        </button>
+                        
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={consumeAmount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              setConsumeAmount(Math.min(Math.max(0, val), quantity));
+                            }}
+                            disabled={consumeAll}
+                            className="w-20 text-center text-2xl font-bold text-[#1A1A1A] bg-transparent border-b-2 border-[#3A5A40] focus:outline-none"
+                          />
+                          <span className="text-lg text-[#666666]">{product.unit}</span>
+                        </div>
+                        
+                        <button
+                          onClick={() => setConsumeAmount(Math.min(quantity, consumeAmount + 1))}
+                          disabled={consumeAll}
+                          className="w-12 h-12 rounded-full bg-[#F2F0E9] flex items-center justify-center active:scale-95 transition-transform"
+                        >
+                          <Plus className="w-5 h-5 text-[#1A1A1A]" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Preview quantità rimanente */}
+                    <div className={`text-center p-3 rounded-2xl mb-5 ${
+                      remainingAfterConsume === 0 
+                        ? 'bg-red-50 text-red-600' 
+                        : 'bg-[#A3B18A]/20 text-[#3A5A40]'
+                    }`}>
+                      <span className="text-sm font-medium">
+                        {remainingAfterConsume === 0 
+                          ? `⚠️ Il prodotto verrà rimosso dall'inventario`
+                          : `Quantità rimanente: ${remainingAfterConsume} ${product.unit}`
+                        }
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setShowConsumeModal(false)}
+                        className="py-3 bg-[#F2F0E9] text-[#1A1A1A] font-semibold rounded-2xl active:scale-[0.98] transition-transform"
+                      >
+                        Annulla
+                      </button>
+                      <button
+                        onClick={handleConfirmConsume}
+                        className="py-3 bg-[#D4A373] text-white font-semibold rounded-2xl active:scale-[0.98] transition-transform"
+                      >
+                        Conferma
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+          
           {/* Sub-modal: Aggiungi alla spesa */}
           <AnimatePresence>
             {showAddToShoppingModal && (
@@ -345,46 +606,52 @@ export default function ProductDetailModal({
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="fixed inset-x-6 top-1/2 -translate-y-1/2 bg-white z-[60] rounded-3xl p-5 max-w-sm mx-auto"
+                  className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+                  onClick={() => setShowAddToShoppingModal(false)}
                 >
-                  <h3 className="text-lg font-bold text-[#1A1A1A] mb-4 text-center">
-                    Quanto ne aggiungo?
-                  </h3>
-                  
-                  <div className="flex items-center justify-center gap-4 mb-6">
-                    <button
-                      onClick={() => setShoppingQuantity(Math.max(1, shoppingQuantity - 1))}
-                      className="w-12 h-12 rounded-full bg-[#F2F0E9] flex items-center justify-center active:scale-95 transition-transform"
-                    >
-                      <Minus className="w-5 h-5 text-[#1A1A1A]" />
-                    </button>
+                  <div 
+                    className="bg-white rounded-3xl p-5 max-w-sm w-full"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3 className="text-lg font-bold text-[#1A1A1A] mb-4 text-center">
+                      Quanto ne aggiungo?
+                    </h3>
                     
-                    <div className="text-center">
-                      <span className="text-3xl font-bold text-[#1A1A1A]">{shoppingQuantity}</span>
-                      <span className="text-lg text-[#666666] ml-1">{product.unit}</span>
+                    <div className="flex items-center justify-center gap-4 mb-6">
+                      <button
+                        onClick={() => setShoppingQuantity(Math.max(1, shoppingQuantity - 1))}
+                        className="w-12 h-12 rounded-full bg-[#F2F0E9] flex items-center justify-center active:scale-95 transition-transform"
+                      >
+                        <Minus className="w-5 h-5 text-[#1A1A1A]" />
+                      </button>
+                      
+                      <div className="text-center">
+                        <span className="text-3xl font-bold text-[#1A1A1A]">{shoppingQuantity}</span>
+                        <span className="text-lg text-[#666666] ml-1">{product.unit}</span>
+                      </div>
+                      
+                      <button
+                        onClick={() => setShoppingQuantity(shoppingQuantity + 1)}
+                        className="w-12 h-12 rounded-full bg-[#F2F0E9] flex items-center justify-center active:scale-95 transition-transform"
+                      >
+                        <Plus className="w-5 h-5 text-[#1A1A1A]" />
+                      </button>
                     </div>
                     
-                    <button
-                      onClick={() => setShoppingQuantity(shoppingQuantity + 1)}
-                      className="w-12 h-12 rounded-full bg-[#F2F0E9] flex items-center justify-center active:scale-95 transition-transform"
-                    >
-                      <Plus className="w-5 h-5 text-[#1A1A1A]" />
-                    </button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => setShowAddToShoppingModal(false)}
-                      className="py-3 bg-[#F2F0E9] text-[#1A1A1A] font-semibold rounded-2xl active:scale-[0.98] transition-transform"
-                    >
-                      Annulla
-                    </button>
-                    <button
-                      onClick={handleAddToShopping}
-                      className="py-3 bg-[#3A5A40] text-white font-semibold rounded-2xl active:scale-[0.98] transition-transform"
-                    >
-                      Conferma
-                    </button>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setShowAddToShoppingModal(false)}
+                        className="py-3 bg-[#F2F0E9] text-[#1A1A1A] font-semibold rounded-2xl active:scale-[0.98] transition-transform"
+                      >
+                        Annulla
+                      </button>
+                      <button
+                        onClick={handleAddToShopping}
+                        className="py-3 bg-[#3A5A40] text-white font-semibold rounded-2xl active:scale-[0.98] transition-transform"
+                      >
+                        Conferma
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               </>

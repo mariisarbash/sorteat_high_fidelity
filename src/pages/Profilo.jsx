@@ -249,32 +249,38 @@ export default function Profilo() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl z-50 p-6 max-w-sm mx-auto text-center"
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={() => setShowQR(false)}
             >
-              <QrCode className="w-8 h-8 text-[#3A5A40] mx-auto mb-4" />
-              <h2 className="text-lg font-bold text-[#1A1A1A] mb-2">Invita coinquilino</h2>
-              <p className="text-sm text-[#666666] mb-4">Fai scansionare questo QR code</p>
-              
-              <div className="w-48 h-48 bg-[#1A1A1A] rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                <div className="w-40 h-40 bg-white rounded-lg p-2">
-                  {/* Mock QR pattern */}
-                  <div className="w-full h-full grid grid-cols-7 gap-0.5">
-                    {[...Array(49)].map((_, i) => (
-                      <div 
-                        key={i} 
-                        className={`${Math.random() > 0.5 ? 'bg-[#1A1A1A]' : 'bg-white'} rounded-sm`}
-                      />
-                    ))}
+              <div 
+                className="bg-white rounded-3xl p-6 max-w-sm w-full text-center"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <QrCode className="w-8 h-8 text-[#3A5A40] mx-auto mb-4" />
+                <h2 className="text-lg font-bold text-[#1A1A1A] mb-2">Invita coinquilino</h2>
+                <p className="text-sm text-[#666666] mb-4">Fai scansionare questo QR code</p>
+                
+                <div className="w-48 h-48 bg-[#1A1A1A] rounded-2xl mx-auto mb-4 flex items-center justify-center">
+                  <div className="w-40 h-40 bg-white rounded-lg p-2">
+                    {/* Mock QR pattern */}
+                    <div className="w-full h-full grid grid-cols-7 gap-0.5">
+                      {[...Array(49)].map((_, i) => (
+                        <div 
+                          key={i} 
+                          className={`${Math.random() > 0.5 ? 'bg-[#1A1A1A]' : 'bg-white'} rounded-sm`}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <button
-                onClick={() => setShowQR(false)}
-                className="w-full py-3 bg-[#3A5A40] text-white font-semibold rounded-2xl"
-              >
-                Chiudi
-              </button>
+                <button
+                  onClick={() => setShowQR(false)}
+                  className="w-full py-3 bg-[#3A5A40] text-white font-semibold rounded-2xl"
+                >
+                  Chiudi
+                </button>
+              </div>
             </motion.div>
           </>
         )}

@@ -17,7 +17,7 @@ const getTimeContext = () => {
 const getGreeting = (timeContext) => {
   switch (timeContext) {
     case 'mattina': return 'Buongiorno';
-    case 'mezzogiorno': return 'Buona mattinata';
+    case 'mezzogiorno': return 'Buongiorno';
     case 'pranzo': return 'Buon pranzo';
     case 'pomeriggio': return 'Buon pomeriggio';
     case 'sera': return 'Buonasera';
