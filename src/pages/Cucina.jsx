@@ -1,5 +1,5 @@
 import React from 'react';
-import { Toaster, toast } from 'sonner'; // Importa toast
+import { Toaster, toast } from 'sonner'; 
 import { useProducts } from '../context/ProductsContext';
 import MealTimeWidget from '../components/cucina/MealTimeWidget';
 import MealStream from '../components/cucina/MealStream';
@@ -8,12 +8,10 @@ export default function Cucina() {
   const { expiringProducts } = useProducts();
   const suggestions = expiringProducts.slice(0, 2);
 
-  // Azione al click (Mock)
   const handleSuggestionClick = (product) => {
     toast.success(`Idea salvata! 💡`, {
         description: `Proveremo a usare ${product.name} nella prossima ricetta.`
     });
-    // In futuro: Apri CreateRecipeModal pre-filtrato per questo prodotto
   };
 
   return (
@@ -25,7 +23,7 @@ export default function Cucina() {
             <h1 className="text-2xl font-bold text-[#1A1A1A]">Cucina</h1>
             <p className="text-sm text-[#666666] mt-1">Pianifica i tuoi pasti</p>
         </div>
-        {/* Bottone Libreria (Placeholder visivo per ora) - NASCOSTO PER ORA
+        {/* FIX: Bottone Libreria Nascosto
         <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center card-shadow active:scale-95 text-xl">
             📚
         </button>
@@ -34,8 +32,11 @@ export default function Cucina() {
 
       <MealTimeWidget />
       
-      {/* Widget Svuota Frigo (semplificato visivamente) */}
-      <div className="px-5 mb-6">
+      {/* 1. Calendario Pasti (Spostato SOPRA) */}
+      <MealStream />
+      
+      {/* 2. Widget Svuota Frigo (Spostato SOTTO) */}
+      <div className="px-5 mb-6 mt-4">
         <div className="bg-white rounded-3xl p-5 card-shadow">
           <h3 className="font-semibold text-[#1A1A1A] mb-3">💡 Svuota Frigo</h3>
           
@@ -51,7 +52,6 @@ export default function Cucina() {
                   <div>
                     <p className="text-sm font-bold text-[#1A1A1A] flex items-center gap-2">
                         {product.name} in scadenza
-                        {/* FIX 5: Traduzione */}
                         <span className="text-[10px] text-red-500 bg-red-100 px-1.5 py-0.5 rounded-md">Urgente</span>
                     </p>
                     <p className="text-xs text-[#666666] mt-0.5">
@@ -69,7 +69,6 @@ export default function Cucina() {
         </div>
       </div>
 
-      <MealStream />
     </div>
   );
 }
