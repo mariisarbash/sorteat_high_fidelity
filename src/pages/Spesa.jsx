@@ -6,9 +6,10 @@ import {
   ChevronDown, 
   ChevronUp,
   Trash2,
-  Edit3,
   Check,
   Filter,
+  CheckCheck,
+  Circle,
   X 
 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
@@ -17,18 +18,7 @@ import OwnerSelector, { ROOMMATES } from '../components/spesa/OwnerSelector';
 import ShoppingItemDetail from '../components/spesa/ShoppingItemDetail';
 import DeleteConfirmModal from '../components/spesa/DeleteConfirmModal';
 import CheckoutModal from '../components/spesa/CheckoutModal';
-import { useProducts } from '../context/ProductsContext';
-
-// Dati mock iniziali
-const initialItems = [
-  { id: 1, name: 'Pomodori', icon: '🍅', quantity: 500, unit: 'g', department: 'ortofrutta', owners: ['mari', 'gio', 'pile'], is_checked: false },
-  { id: 2, name: 'Mozzarella', icon: '🧀', quantity: 2, unit: 'pz', department: 'freschi', owners: ['mari'], is_checked: false },
-  { id: 3, name: 'Pasta', icon: '🍝', quantity: 1, unit: 'kg', department: 'dispensa', owners: ['mari', 'gio', 'pile'], is_checked: true },
-  { id: 4, name: 'Latte', icon: '🥛', quantity: 1, unit: 'L', department: 'freschi', owners: ['gio'], is_checked: false },
-  { id: 5, name: 'Banane', icon: '🍌', quantity: 6, unit: 'pz', department: 'ortofrutta', owners: ['pile'], is_checked: false },
-  { id: 6, name: 'Detersivo', icon: '🧴', quantity: 1, unit: 'pz', department: 'casa', owners: ['mari', 'gio', 'pile'], is_checked: false },
-  { id: 7, name: 'Pane', icon: '🍞', quantity: 1, unit: 'pz', department: 'freschi', owners: ['mari', 'gio'], is_checked: true },
-];
+import { useProducts } from '../context/ProductsContext'; // IMPORT CONTEXT
 
 const departments = [
   { id: 'ortofrutta', name: 'Ortofrutta', icon: '🥗' },
@@ -38,7 +28,9 @@ const departments = [
 ];
 
 export default function Spesa() {
-  const [items, setItems] = useState(initialItems);
+  // FIX: Leggiamo la lista dal context globale, non locale!
+  const { shoppingList, setShoppingList, addProducts } = useProducts(); 
+  
   const [filterOwner, setFilterOwner] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedDepartments, setExpandedDepartments] = useState(
@@ -51,19 +43,17 @@ export default function Spesa() {
   const [deleteItem, setDeleteItem] = useState(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-  const { addProducts } = useProducts();
-
   // Filtra items
   const filteredItems = useMemo(() => {
-    if (!filterOwner) return items;
+    if (!filterOwner) return shoppingList;
     if (filterOwner === 'shared') {
-      return items.filter(item => 
+      return shoppingList.filter(item => 
         item.owners.length === ROOMMATES.length && 
         ROOMMATES.every(r => item.owners.includes(r.id))
       );
     }
-    return items.filter(item => item.owners.includes(filterOwner));
-  }, [items, filterOwner]);
+    return shoppingList.filter(item => item.owners.includes(filterOwner));
+  }, [shoppingList, filterOwner]);
 
   const allChecked = useMemo(() => {
     return filteredItems.length > 0 && filteredItems.every(item => item.is_checked);
@@ -71,7 +61,7 @@ export default function Spesa() {
 
   const toggleAllItems = () => {
     const filteredIds = filteredItems.map(item => item.id);
-    setItems(prev => prev.map(item => 
+    setShoppingList(prev => prev.map(item => 
       filteredIds.includes(item.id) 
         ? { ...item, is_checked: !allChecked }
         : item
@@ -79,19 +69,25 @@ export default function Spesa() {
   };
 
   const itemsByDepartment = useMemo(() => {
+    // Gestione elementi senza dipartimento (es. aggiunti da ricetta)
+    const normalizedItems = filteredItems.map(i => ({
+        ...i, 
+        department: departments.find(d => d.id === i.department) ? i.department : 'dispensa'
+    }));
+
     return departments.map(dept => ({
       ...dept,
-      items: filteredItems.filter(item => item.department === dept.id && !item.is_checked),
-      checkedItems: filteredItems.filter(item => item.department === dept.id && item.is_checked),
+      items: normalizedItems.filter(item => item.department === dept.id && !item.is_checked),
+      checkedItems: normalizedItems.filter(item => item.department === dept.id && item.is_checked),
     })).filter(dept => dept.items.length > 0 || dept.checkedItems.length > 0);
   }, [filteredItems]);
 
   const checkedItems = useMemo(() => {
-    return items.filter(i => i.is_checked);
-  }, [items]);
+    return shoppingList.filter(i => i.is_checked);
+  }, [shoppingList]);
 
   const toggleCheck = (itemId) => {
-    setItems(prev => prev.map(item => 
+    setShoppingList(prev => prev.map(item => 
       item.id === itemId ? { ...item, is_checked: !item.is_checked } : item
     ));
   };
@@ -101,28 +97,28 @@ export default function Spesa() {
   };
 
   const handleSaveItem = (savedItem) => {
-    if (items.find(i => i.id === savedItem.id)) {
-      setItems(prev => prev.map(item => 
+    if (shoppingList.find(i => i.id === savedItem.id)) {
+      setShoppingList(prev => prev.map(item => 
         item.id === savedItem.id ? savedItem : item
       ));
     } else {
-      setItems(prev => [...prev, savedItem]);
+      setShoppingList(prev => [...prev, savedItem]);
     }
   };
 
   const handleDeleteItem = () => {
     if (deleteItem) {
-      setItems(prev => prev.filter(item => item.id !== deleteItem.id));
+      setShoppingList(prev => prev.filter(item => item.id !== deleteItem.id));
     }
   };
 
   const handleCheckout = (productsToAdd) => {
     const checkedIds = checkedItems.map(i => i.id);
-    setItems(prev => prev.filter(item => !checkedIds.includes(item.id)));
+    // Rimuovi dalla spesa
+    setShoppingList(prev => prev.filter(item => !checkedIds.includes(item.id)));
+    // Aggiungi all'inventario
     addProducts(productsToAdd);
-    toast.success(`${productsToAdd.length} prodotti aggiunti all'inventario!`, {
-      description: 'Puoi vederli nella sezione Inventario'
-    });
+    toast.success(`${productsToAdd.length} prodotti aggiunti all'inventario!`);
   };
 
   // Componente Item
@@ -154,7 +150,7 @@ export default function Spesa() {
         onClick={() => setEditingItem(item)}
       >
         <span className={`text-2xl ${item.is_checked ? 'grayscale' : ''}`}>
-          {item.icon}
+          {item.icon || '🛒'}
         </span>
         <div className="flex-1 min-w-0">
           <p className={`font-medium text-[15px] ${
@@ -189,18 +185,17 @@ export default function Spesa() {
     <div className={`min-h-screen bg-[#F7F6F3] transition-all ${checkedItems.length > 0 ? 'pb-40' : 'pb-24'}`}>
       <Toaster position="top-center" richColors />
       
-      {/* --- HEADER --- */}
+      {/* Header */}
       <div className="sticky top-0 z-20 bg-[#F7F6F3]/95 backdrop-blur-sm px-5 pt-12 pb-2">
         <div className="flex items-center justify-between mb-4">
           <div>
              <h1 className="text-3xl font-bold text-[#1A1A1A]">Spesa</h1>
              <p className="text-[#666666] text-sm mt-1">
-                {items.length === 0 ? 'Lista vuota' : `${items.length} prodotti in lista`}
+                {shoppingList.length === 0 ? 'Lista vuota' : `${shoppingList.length} prodotti in lista`}
              </p>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* PULSANTE TESTUALE PER SELEZIONE (Migliorato) */}
             {filteredItems.length > 0 && (
               <button
                 onClick={toggleAllItems}
@@ -290,7 +285,7 @@ export default function Spesa() {
         </AnimatePresence>
       </div>
 
-      {/* --- CONTENT LIST --- */}
+      {/* Content */}
       <div className="px-5 space-y-6 mt-2">
         {itemsByDepartment.length === 0 ? (
           <div className="text-center py-20 opacity-50">
@@ -335,8 +330,7 @@ export default function Spesa() {
         )}
       </div>
 
-      {/* --- CHECKOUT BAR CORRETTA (FIX LAYOUT) --- */}
-      {/* Usiamo un container full-width invisibile, e dentro centriamo la barra */}
+      {/* Checkout Bar */}
       <AnimatePresence>
         {checkedItems.length > 0 && (
           <div className="fixed inset-x-0 bottom-[80px] z-30 pointer-events-none px-5">
@@ -345,7 +339,6 @@ export default function Spesa() {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                // pointer-events-auto riattiva i click sulla barra
                 className="pointer-events-auto w-full max-w-md mx-auto bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-2xl p-4 flex items-center justify-between"
               >
                 <div className="flex flex-col">

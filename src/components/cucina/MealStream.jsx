@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, Users, X, RefreshCw } from 'lucide-react';
+import { Plus, Users, X, ChefHat, ShoppingCart, Clock, Sparkles, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import RecipeDetailModal from './RecipeDetailModal';
+import CreateRecipeModal from './CreateRecipeModal';
+import { useProducts } from '../../context/ProductsContext'; 
 
 const today = new Date();
 const formatDay = (daysFromNow) => {
@@ -14,87 +17,119 @@ const formatDay = (daysFromNow) => {
   };
 };
 
-const initialMeals = [
-  { id: 1, day: 0, type: 'pranzo', name: 'Pasta al pesto', icon: '🍝', chef: 'Mari', participants: ['Mari', 'Gio', 'Pile'], servings: 3 },
-  { id: 2, day: 0, type: 'cena', name: 'Carbonara', icon: '🍝', chef: 'Mari', participants: ['Mari', 'Gio'], servings: 2 },
-  { id: 3, day: 1, type: 'pranzo', name: 'Avanzi Carbonara', icon: '📦', chef: null, participants: ['Mari'], servings: 1, isLeftover: true },
-  { id: 4, day: 1, type: 'cena', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
-  { id: 5, day: 2, type: 'pranzo', name: 'Insalatona', icon: '🥗', chef: 'Gio', participants: ['Gio', 'Pile'], servings: 2 },
-  { id: 6, day: 2, type: 'cena', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
-  { id: 7, day: 3, type: 'pranzo', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
-  { id: 8, day: 3, type: 'cena', name: 'Pizza fatta in casa', icon: '🍕', chef: 'Pile', participants: ['Mari', 'Gio', 'Pile'], servings: 3 },
+const ROOMMATES = [
+  { id: 'mari', label: 'Mari', color: 'bg-pink-500' },
+  { id: 'gio', label: 'Gio', color: 'bg-blue-500' },
+  { id: 'pile', label: 'Pile', color: 'bg-purple-500' },
 ];
 
 export default function MealStream() {
-  const [meals, setMeals] = useState(initialMeals);
-  const [selectedMeal, setSelectedMeal] = useState(null);
-  const [showCookTwice, setShowCookTwice] = useState(false);
+  // FIX CRASH: Recupero 'meals' dal context invece che useState locale
+  const { recipes, addRecipe, products, meals, updateMealInCalendar } = useProducts();
+
+  const [selectedMeal, setSelectedMeal] = useState(null); 
+  const [isPlanningOpen, setIsPlanningOpen] = useState(false);
+  const [planningMode, setPlanningMode] = useState('menu'); 
+  const [mockSelectedIngredients, setMockSelectedIngredients] = useState([]); 
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); 
+  const [prefilledRecipe, setPrefilledRecipe] = useState(null); 
+  const [planningSlot, setPlanningSlot] = useState(null); 
 
   const days = [0, 1, 2, 3];
 
   const getMealForDay = (dayOffset, mealType) => {
-    return meals.find(m => m.day === dayOffset && m.type === mealType);
+    // FIX SAFEGUARD: Aggiunto controllo se meals è caricato
+    return meals ? meals.find(m => m.day === dayOffset && m.type === mealType) : null;
   };
 
   const handleMealClick = (meal) => {
+    if (!meal) return;
     if (meal.isEmpty) {
-      toast('Funzionalità in arrivo!', {
-        icon: '🚀',
-        description: 'Presto potrai aggiungere pasti qui'
-      });
-      return;
+      setPlanningSlot({ day: meal.day, type: meal.type });
+      setPlanningMode('menu'); 
+      setMockSelectedIngredients([]);
+      setIsPlanningOpen(true);
+    } else {
+      setSelectedMeal(meal);
     }
-    setSelectedMeal(meal);
   };
 
-  const handleSkipMeal = (mealId, participant) => {
-    setMeals(meals.map(m => {
-      if (m.id === mealId) {
-        const newParticipants = m.participants.filter(p => p !== participant);
-        return {
-          ...m,
-          participants: newParticipants,
-          servings: newParticipants.length
-        };
-      }
-      return m;
-    }));
+  const handleQuickAdd = (recipe) => {
+    if (!planningSlot) return;
     
-    toast.success(`${participant} non parteciperà`, {
-      description: 'Porzioni aggiornate automaticamente'
-    });
-    setSelectedMeal(null);
+    const mealData = typeof recipe === 'string' 
+        ? { name: recipe, icon: '🍝', chef: 'Mari', participants: ['Tutti'], servings: 2 }
+        : { 
+            name: recipe.name, 
+            icon: recipe.icon, 
+            chef: 'Mari', 
+            participants: ['Tutti'], 
+            servings: recipe.servings,
+            ingredients: recipe.ingredients, 
+            steps: recipe.steps 
+          };
+
+    updateMealInCalendar(planningSlot, mealData);
+    setIsPlanningOpen(false);
+    toast.success(`${mealData.name} aggiunto al menu!`);
   };
 
-  const handleToggleCookTwice = () => {
-    setShowCookTwice(!showCookTwice);
-    if (!showCookTwice) {
-      toast.success('Cucina per il pranzo di domani attivato!', {
-        description: 'Avanzi aggiunti al calendario'
-      });
-    }
+  const openCreateModal = (recipeData = null) => {
+    setPrefilledRecipe(recipeData);
+    setIsPlanningOpen(false);
+    setTimeout(() => setIsCreateModalOpen(true), 200);
+  };
+
+  const handleSaveNewRecipe = (recipeData) => {
+    if (!planningSlot) return;
+    
+    updateMealInCalendar(planningSlot, {
+        name: recipeData.name,
+        icon: recipeData.icon,
+        chef: 'Mari', 
+        participants: recipeData.participants || ['Tutti'],
+        servings: recipeData.servings,
+        ingredients: recipeData.ingredients,
+        steps: recipeData.steps
+    });
+
+    addRecipe(recipeData);
+    toast.success('Ricetta salvata e pianificata! 👨‍🍳');
+  };
+
+  const startMockAI = () => {
+    setPlanningMode('ai_mock');
+    const sequence = [{ t: 500, ing: 'Uova' }, { t: 1200, ing: 'Spinaci' }, { t: 1800, ing: 'Formaggio' }];
+    sequence.forEach(({ t, ing }) => {
+        setTimeout(() => {
+            setMockSelectedIngredients(prev => [...prev, ing]);
+        }, t);
+    });
+    setTimeout(() => {
+        const generatedRecipe = {
+            name: 'Frittata di Spinaci',
+            icon: '🍳',
+            prepTime: 20,
+            servings: 1, 
+            ingredients: [
+                { productId: '', name: 'Uova', qty: 2, unit: 'pz' },
+                { productId: '', name: 'Spinaci', qty: 100, unit: 'g' },
+                { productId: '', name: 'Formaggio', qty: 30, unit: 'g' },
+                { productId: '', name: 'Olio', qty: 10, unit: 'ml' }
+            ],
+            steps: ['Sbatti le uova con sale e pepe.', 'Salta gli spinaci.', 'Unisci e cuoci.']
+        };
+        openCreateModal(generatedRecipe);
+    }, 2500);
   };
 
   return (
     <div className="px-5 mb-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-[#1A1A1A]">I prossimi giorni</h3>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleToggleCookTwice}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              showCookTwice 
-                ? 'bg-[#3A5A40] text-white' 
-                : 'bg-white text-[#666666] card-shadow'
-            }`}
-          >
-            <RefreshCw className="w-3 h-3" />
-            Cook Once, Eat Twice
-          </button>
-        </div>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+      <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 no-scrollbar">
         {days.map((dayOffset) => {
           const dayInfo = formatDay(dayOffset);
           const pranzo = getMealForDay(dayOffset, 'pranzo');
@@ -103,140 +138,179 @@ export default function MealStream() {
           return (
             <div key={dayOffset} className="flex-shrink-0 w-32">
               <div className="text-center mb-2">
-                <p className="text-xs text-[#666666]">{dayInfo.day}</p>
-                <p className="font-bold text-[#1A1A1A]">{dayInfo.date}</p>
+                <p className="text-xs text-[#666666] uppercase tracking-wide">{dayInfo.day}</p>
+                <p className="font-bold text-[#1A1A1A] text-lg">{dayInfo.date}</p>
               </div>
-
               <div className="space-y-2">
-                {/* Pranzo */}
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleMealClick(pranzo)}
-                  className={`w-full p-3 rounded-2xl text-center transition-all ${
-                    pranzo?.isEmpty 
-                      ? 'border-2 border-dashed border-gray-300 bg-transparent' 
-                      : pranzo?.isLeftover
-                        ? 'bg-[#D4A373]/20'
-                        : 'bg-white card-shadow'
-                  }`}
-                >
-                  {pranzo?.isEmpty ? (
-                    <div className="py-2">
-                      <Plus className="w-5 h-5 text-gray-400 mx-auto" />
-                      <p className="text-[10px] text-gray-400 mt-1">Pranzo</p>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="text-2xl">{pranzo?.icon}</span>
-                      <p className="text-xs font-medium text-[#1A1A1A] mt-1 truncate">{pranzo?.name}</p>
-                      {pranzo?.chef && (
-                        <p className="text-[10px] text-[#666666]">Chef: {pranzo.chef}</p>
-                      )}
-                    </>
-                  )}
-                </motion.button>
-
-                {/* Cena */}
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleMealClick(cena)}
-                  className={`w-full p-3 rounded-2xl text-center transition-all ${
-                    cena?.isEmpty 
-                      ? 'border-2 border-dashed border-gray-300 bg-transparent' 
-                      : 'bg-white card-shadow'
-                  }`}
-                >
-                  {cena?.isEmpty ? (
-                    <div className="py-2">
-                      <Plus className="w-5 h-5 text-gray-400 mx-auto" />
-                      <p className="text-[10px] text-gray-400 mt-1">Cena</p>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="text-2xl">{cena?.icon}</span>
-                      <p className="text-xs font-medium text-[#1A1A1A] mt-1 truncate">{cena?.name}</p>
-                      {cena?.chef && (
-                        <p className="text-[10px] text-[#666666]">Chef: {cena.chef}</p>
-                      )}
-                    </>
-                  )}
-                </motion.button>
+                <MealCard meal={pranzo} onClick={() => handleMealClick(pranzo)} label="Pranzo" />
+                <MealCard meal={cena} onClick={() => handleMealClick(cena)} label="Cena" />
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Meal Detail Modal */}
+      {/* --- MODALE SCELTA & GENERATORE --- */}
       <AnimatePresence>
-        {selectedMeal && !selectedMeal.isEmpty && (
-          <>
+        {isPlanningOpen && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 z-50"
-              onClick={() => setSelectedMeal(null)}
-            />
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 p-5 max-w-md mx-auto"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm"
+                onClick={() => setIsPlanningOpen(false)}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-4xl">{selectedMeal.icon}</span>
-                  <div>
-                    <h2 className="text-lg font-bold text-[#1A1A1A]">{selectedMeal.name}</h2>
-                    {selectedMeal.chef && (
-                      <p className="text-sm text-[#666666]">Chef: {selectedMeal.chef}</p>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedMeal(null)}
-                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"
+                <motion.div
+                    initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+                    className="bg-white w-full max-w-md rounded-t-3xl p-6 pb-10 max-h-[85vh] overflow-y-auto"
+                    onClick={e => e.stopPropagation()}
                 >
-                  <X className="w-4 h-4 text-gray-600" />
-                </button>
-              </div>
+                    <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
+                    
+                    {planningMode === 'menu' ? (
+                        <>
+                            <h3 className="text-lg font-bold text-[#1A1A1A] mb-4">Cosa cuciniamo?</h3>
+                            <div className="space-y-3">
+                                {/* Tasto Generatore AI */}
+                                <button 
+                                    onClick={startMockAI}
+                                    className="w-full p-4 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white rounded-2xl flex items-center gap-3 active:scale-[0.98] shadow-lg shadow-violet-200"
+                                >
+                                    <Sparkles className="w-6 h-6" />
+                                    <div className="text-left">
+                                        <p className="font-bold">Genera con AI</p>
+                                        <p className="text-xs opacity-90">Usa gli ingredienti che hai</p>
+                                    </div>
+                                </button>
 
-              <div className="mb-4">
-                <p className="text-sm text-[#666666] mb-2">Partecipanti ({selectedMeal.servings} porzioni)</p>
-                <div className="flex gap-2">
-                  {selectedMeal.participants.map((p) => (
-                    <div key={p} className="flex items-center gap-2 px-3 py-2 bg-[#F2F0E9] rounded-xl">
-                      <div className="w-6 h-6 rounded-full bg-[#A3B18A] flex items-center justify-center text-white text-xs font-bold">
-                        {p[0]}
-                      </div>
-                      <span className="text-sm font-medium">{p}</span>
-                      {p !== 'Mari' && (
-                        <button
-                          onClick={() => handleSkipMeal(selectedMeal.id, p)}
-                          className="text-xs text-red-500 font-medium"
-                        >
-                          Salto
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  toast.success('Funzionalità in arrivo!', { icon: '🚀' });
-                  setSelectedMeal(null);
-                }}
-                className="w-full py-3 bg-[#3A5A40] text-white font-semibold rounded-2xl"
-              >
-                Apri ricetta
-              </button>
+                                {/* Libreria Ricette */}
+                                {recipes && recipes.length > 0 && (
+                                    <div className="pt-2">
+                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2 px-1">Le tue ricette</p>
+                                        {recipes.map(recipe => (
+                                            <button 
+                                                key={recipe.id}
+                                                onClick={() => handleQuickAdd(recipe)}
+                                                className="w-full p-4 bg-white border border-gray-100 shadow-sm rounded-2xl flex items-center gap-3 mb-2 active:scale-[0.98]"
+                                            >
+                                                <span className="text-2xl">{recipe.icon}</span>
+                                                <div className="text-left">
+                                                    <p className="font-bold text-[#1A1A1A]">{recipe.name}</p>
+                                                    <p className="text-xs text-gray-500 flex items-center gap-2">
+                                                        <Clock className="w-3 h-3" /> {recipe.prepTime} min • {recipe.servings} pers
+                                                    </p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                
+                                <button 
+                                    onClick={() => openCreateModal(null)}
+                                    className="w-full p-4 border-2 border-dashed border-[#3A5A40]/30 bg-[#3A5A40]/5 rounded-2xl text-[#3A5A40] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-colors mt-2"
+                                >
+                                    <Plus className="w-5 h-5" /> Crea nuova ricetta
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        /* VISTA MOCK SELEZIONE AI */
+                        <>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-bold text-[#1A1A1A] flex items-center gap-2">
+                                    <Sparkles className="w-5 h-5 text-violet-500 animate-pulse" />
+                                    Analisi Frigo...
+                                </h3>
+                            </div>
+                            <p className="text-sm text-gray-500 mb-4">L'AI sta scegliendo gli ingredienti migliori.</p>
+                            <div className="flex flex-wrap gap-2 mb-6">
+                                {['Uova', 'Latte', 'Spinaci', 'Pasta', 'Formaggio', 'Pollo', 'Pomodori'].map(name => {
+                                    const isSelected = mockSelectedIngredients.includes(name);
+                                    return (
+                                        <motion.div
+                                            key={name}
+                                            initial={false}
+                                            animate={{ 
+                                                scale: isSelected ? 1.05 : 1,
+                                                backgroundColor: isSelected ? '#3A5A40' : '#FFFFFF',
+                                                borderColor: isSelected ? '#3A5A40' : '#E5E7EB',
+                                                color: isSelected ? '#FFFFFF' : '#4B5563'
+                                            }}
+                                            className="px-3 py-2 rounded-xl text-sm font-medium border flex items-center gap-2"
+                                        >
+                                            {name}
+                                            {isSelected && <Check className="w-3 h-3" />}
+                                        </motion.div>
+                                    )
+                                })}
+                            </div>
+                            <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                                <motion.div 
+                                    className="h-full bg-violet-500"
+                                    initial={{ width: "0%" }}
+                                    animate={{ width: "100%" }}
+                                    transition={{ duration: 2.5, ease: "linear" }}
+                                />
+                            </div>
+                        </>
+                    )}
+                </motion.div>
             </motion.div>
-          </>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {isCreateModalOpen && (
+            <CreateRecipeModal 
+                isOpen={isCreateModalOpen} 
+                onClose={() => setIsCreateModalOpen(false)} 
+                onSave={handleSaveNewRecipe}
+                initialData={prefilledRecipe}
+            />
+        )}
+      </AnimatePresence>
+
+      <RecipeDetailModal 
+        meal={selectedMeal} 
+        isOpen={!!selectedMeal && !selectedMeal.isEmpty} 
+        onClose={() => setSelectedMeal(null)} 
+      />
     </div>
   );
 }
+
+const MealCard = ({ meal, onClick, label }) => {
+    const chefColor = meal?.chef 
+        ? ROOMMATES.find(r => r.label === meal.chef || r.id === meal.chef.toLowerCase())?.color || 'bg-gray-400'
+        : 'bg-gray-400';
+
+    return (
+        <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onClick}
+            className={`w-full p-3 rounded-2xl text-center transition-all h-[90px] flex flex-col items-center justify-center relative overflow-hidden ${
+            meal?.isEmpty 
+                ? 'border-2 border-dashed border-gray-200 bg-transparent hover:bg-gray-50' 
+                : meal?.isLeftover
+                ? 'bg-[#D4A373]/10 border border-[#D4A373]/20'
+                : 'bg-white card-shadow border border-transparent'
+            }`}
+        >
+            {meal?.isEmpty ? (
+            <>
+                <Plus className="w-5 h-5 text-gray-300 mb-1" />
+                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">{label}</p>
+            </>
+            ) : (
+            <>
+                {meal?.chef && (
+                    <div className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white ${chefColor}`}>
+                        {meal.chef[0]}
+                    </div>
+                )}
+                <span className="text-2xl mb-1 block">{meal?.icon}</span>
+                <p className="text-xs font-bold text-[#1A1A1A] w-full truncate px-1">{meal?.name}</p>
+                <p className="text-[10px] text-gray-500">{meal?.servings} porz.</p>
+            </>
+            )}
+        </motion.button>
+    );
+};
