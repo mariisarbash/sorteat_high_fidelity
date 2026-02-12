@@ -15,7 +15,7 @@ export default function Inventario() {
   const [notifications, setNotifications] = useState([]);
   
   // Usa il contesto globale dei prodotti
-  const { products, updateProduct, removeProduct } = useProducts();
+  const { products, updateProduct, removeProduct, addProduct } = useProducts();
 
   // Utente corrente (mock)
   const currentUser = 'mari';
@@ -77,6 +77,10 @@ export default function Inventario() {
     }
   };
 
+  const handleAddProduct = (product) => {
+    addProduct(product);
+  };
+
   return (
     <div className="min-h-screen pb-4">
       <Toaster position="top-center" richColors />
@@ -110,6 +114,7 @@ export default function Inventario() {
         onAddNotification={handleAddNotification}
         onUpdateProduct={handleUpdateProduct}
         onRemoveProduct={handleRemoveProduct}
+        onAddProduct={handleAddProduct}
       />
     </div>
   );

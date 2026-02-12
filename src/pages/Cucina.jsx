@@ -25,16 +25,17 @@ export default function Cucina() {
             <h1 className="text-2xl font-bold text-[#1A1A1A]">Cucina</h1>
             <p className="text-sm text-[#666666] mt-1">Pianifica i tuoi pasti</p>
         </div>
-        {/* FIX 3: Bottone Libreria (Placeholder visivo per ora) */}
+        {/* Bottone Libreria (Placeholder visivo per ora) - NASCOSTO PER ORA
         <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center card-shadow active:scale-95 text-xl">
             📚
         </button>
+        */}
       </div>
 
       <MealTimeWidget />
-      <MealStream />
-
-      <div className="px-5 mt-4">
+      
+      {/* Widget Svuota Frigo (semplificato visivamente) */}
+      <div className="px-5 mb-6">
         <div className="bg-white rounded-3xl p-5 card-shadow">
           <h3 className="font-semibold text-[#1A1A1A] mb-3">💡 Svuota Frigo</h3>
           
@@ -62,11 +63,13 @@ export default function Cucina() {
             </div>
           ) : (
             <div className="p-4 text-center text-gray-500 text-sm italic">
-                Nessun prodotto in scadenza. Ottimo lavoro! 🎉
+                Nessun prodotto in scadenza. Ottimo lavoro! 👏
             </div>
           )}
         </div>
       </div>
+
+      <MealStream />
     </div>
   );
 }

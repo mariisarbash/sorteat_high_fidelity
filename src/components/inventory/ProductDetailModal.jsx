@@ -64,7 +64,8 @@ export default function ProductDetailModal({
   currentUser = 'mari',
   onAddNotification,
   onUpdateProduct,
-  onRemoveProduct
+  onRemoveProduct,
+  onAddProduct
 }) {
   const { registerWaste } = useWaste();
   const [isEditing, setIsEditing] = useState(false);
@@ -113,9 +114,30 @@ export default function ProductDetailModal({
     setShowConsumeModal(true);
   };
 
+
   // Handler per confermare il consumo
   const handleConfirmConsume = () => {
+    const originalQuantity = quantity;
     const newQuantity = consumeAll ? 0 : Math.max(0, quantity - consumeAmount);
+
+    const undoAction = () => {
+      if (newQuantity === 0) {
+        // Se il prodotto è stato rimosso, riaggiungilo
+        if (onAddProduct) {
+          onAddProduct(product);
+        }
+      } else {
+        // Altrimenti, ripristina la quantità originale
+        if (onUpdateProduct) {
+          onUpdateProduct(product.id, originalQuantity);
+        }
+        setQuantity(originalQuantity);
+      }
+      toast.success(`Azione annullata!`, {
+        description: `${product.name} è stato ripristinato.`,
+        icon: '↩️'
+      });
+    };
     
     if (newQuantity === 0) {
       // Rimuovi il prodotto
@@ -124,7 +146,11 @@ export default function ProductDetailModal({
       }
       toast.success(`${product.name} terminato!`, {
         description: 'Prodotto rimosso dall\'inventario',
-        icon: '✅'
+        icon: '✅',
+        action: {
+          label: 'Annulla',
+          onClick: undoAction
+        },
       });
     } else {
       // Aggiorna la quantità
@@ -134,7 +160,11 @@ export default function ProductDetailModal({
       setQuantity(newQuantity);
       toast.success(`${product.name} consumato!`, {
         description: `Rimangono ${newQuantity} ${product.unit}`,
-        icon: '✅'
+        icon: '✅',
+        action: {
+          label: 'Annulla',
+          onClick: undoAction
+        },
       });
     }
     

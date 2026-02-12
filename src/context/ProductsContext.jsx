@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
-import { getDaysUntilExpiry } from '@/utils/products';
+import { getDaysUntilExpiry } from '../utils/products'; // Assicurati che questo path sia corretto per il tuo progetto
 
 export { getDaysUntilExpiry };
 
@@ -28,15 +28,78 @@ const initialRecipes = [
   { id: 'r1', name: 'Pasta al Pesto', icon: '🍝', prepTime: 15, servings: 2, ingredients: [{name: 'Pasta', qty: 200, unit: 'g'}, {name: 'Basilico', qty: 50, unit: 'g'}] },
 ];
 
+// FIX 2: Aggiunti ingredienti alle ricette Mock
 const initialMeals = [
-  { id: 1, day: 0, type: 'pranzo', name: 'Pasta al pesto', icon: '🍝', chef: 'Mari', participants: ['Mari', 'Gio', 'Pile'], servings: 3 },
-  { id: 2, day: 0, type: 'cena', name: 'Carbonara', icon: '🍝', chef: 'Mari', participants: ['Mari', 'Gio'], servings: 2 },
+  { 
+    id: 1, 
+    day: 0, 
+    type: 'pranzo', 
+    name: 'Pasta al pesto', 
+    icon: '🍝', 
+    chef: 'Mari', 
+    participants: ['Mari', 'Gio', 'Pile'], 
+    servings: 3,
+    ingredients: [
+      { name: 'Pasta', qty: 300, unit: 'g' },
+      { name: 'Basilico', qty: 50, unit: 'g' },
+      { name: 'Olio', qty: 30, unit: 'ml' },
+      { name: 'Parmigiano', qty: 50, unit: 'g' }
+    ]
+  },
+  { 
+    id: 2, 
+    day: 0, 
+    type: 'cena', 
+    name: 'Carbonara', 
+    icon: '🍝', 
+    chef: 'Mari', 
+    participants: ['Mari', 'Gio'], 
+    servings: 2,
+    ingredients: [
+        { name: 'Pasta', qty: 200, unit: 'g' },
+        { name: 'Uova', qty: 3, unit: 'pz' },
+        { name: 'Guanciale', qty: 100, unit: 'g' },
+        { name: 'Pepe', qty: 5, unit: 'g' }
+    ]
+  },
   { id: 3, day: 1, type: 'pranzo', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
   { id: 4, day: 1, type: 'cena', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
-  { id: 5, day: 2, type: 'pranzo', name: 'Insalatona', icon: '🥗', chef: 'Gio', participants: ['Gio', 'Pile', 'Mari'], servings: 3 },
+  { 
+    id: 5, 
+    day: 2, 
+    type: 'pranzo', 
+    name: 'Insalatona', 
+    icon: '🥗', 
+    chef: 'Gio', 
+    participants: ['Gio', 'Pile', 'Mari'], 
+    servings: 3,
+    ingredients: [
+        { name: 'Lattuga', qty: 1, unit: 'cespo' },
+        { name: 'Pomodori', qty: 300, unit: 'g' },
+        { name: 'Mozzarella', qty: 250, unit: 'g' },
+        { name: 'Tonno', qty: 2, unit: 'scatolette' },
+        { name: 'Mais', qty: 150, unit: 'g' }
+    ] 
+  },
   { id: 6, day: 2, type: 'cena', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
   { id: 7, day: 3, type: 'pranzo', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
-  { id: 8, day: 3, type: 'cena', name: 'Pizza fatta in casa', icon: '🍕', chef: 'Pile', participants: ['Mari', 'Gio', 'Pile'], servings: 3 },
+  { 
+    id: 8, 
+    day: 3, 
+    type: 'cena', 
+    name: 'Pizza fatta in casa', 
+    icon: '🍕', 
+    chef: 'Pile', 
+    participants: ['Mari', 'Gio', 'Pile'], 
+    servings: 3,
+    ingredients: [
+        { name: 'Farina', qty: 500, unit: 'g' },
+        { name: 'Lievito', qty: 1, unit: 'cubetto' },
+        { name: 'Passata di pomodoro', qty: 400, unit: 'g' },
+        { name: 'Mozzarella', qty: 400, unit: 'g' },
+        { name: 'Olio', qty: 20, unit: 'ml' }
+    ]
+  },
 ];
 
 const ProductsContext = createContext(null);
@@ -108,50 +171,93 @@ export function ProductsProvider({ children }) {
         return m;
     }));
   };
-
-  // --- RIMUOVI DAL CALENDARIO (RESET SLOT) ---
+  
+  // --- RIMUOVI DAL CALENDARIO ---
   const removeMealFromCalendar = (slot) => {
     setMeals(prev => prev.map(m => {
         if (m.day === slot.day && m.type === slot.type) {
             return { 
                 ...m, 
-                isEmpty: true, 
-                name: null, 
-                icon: null, 
-                chef: null, 
-                participants: [], 
-                servings: 0, 
-                ingredients: [], 
-                steps: [],
-                isLeftover: false 
+                name: null, icon: null, chef: null, participants: [], 
+                servings: 0, isEmpty: true, ingredients: [] 
             };
         }
         return m;
     }));
   };
 
-  const updateProduct = (id, qty) => setProducts(p => p.map(x => x.id === id ? { ...x, quantity: qty } : x));
-  const removeProduct = (id) => setProducts(p => p.filter(x => x.id !== id));
-  const addProducts = (newP) => setProducts(prev => [...prev, ...newP.map((p, i) => ({...p, id: Date.now()+i, category: 'frigo', expiry_date: '2026-06-01'}))]);
-  const addRecipe = (newR) => setRecipes(prev => [...prev, { ...newR, id: Date.now() }]);
-  const addToShoppingList = (name) => setShoppingList(prev => [...prev, { id: Date.now(), name, icon: '🛒', quantity: 1, unit: 'pz', owners: ['mari'], is_checked: false }]);
-
-  const expiringProducts = useMemo(() => {
-    return products.filter(p => p.expiry_date && getDaysUntilExpiry(p.expiry_date) <= 3).sort((a,b) => new Date(a.expiry_date) - new Date(b.expiry_date));
-  }, [products]);
-
-  const value = {
-    products, shoppingList, setShoppingList, recipes, 
-    meals, updateMealInCalendar, removeMealFromCalendar,
-    updateProduct, removeProduct, addProducts, addRecipe, addToShoppingList, consumeIngredients, 
-    expiringProducts, getDaysUntilExpiry, convertToBaseUnit, areUnitsCompatible
+  const addRecipe = (newRecipe) => {
+    setRecipes(prev => [...prev, { ...newRecipe, id: `r${Date.now()}` }]);
   };
 
-  return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;
+  const updateProduct = (updatedProduct) => {
+    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+  };
+  
+  const removeProduct = (productId) => {
+    setProducts(prev => prev.filter(p => p.id !== productId));
+  };
+
+  // FIX 4.1: addProducts ora gestisce correttamente owner e category
+  const addProducts = (newProducts) => {
+    const productsToAdd = Array.isArray(newProducts) ? newProducts : [newProducts];
+    const formattedProducts = productsToAdd.map(p => ({
+        id: Date.now() + Math.random(),
+        name: p.name,
+        icon: p.icon || '📦',
+        category: p.category || 'dispensa', // Usa la categoria passata o default
+        quantity: parseFloat(p.quantity) || 1,
+        unit: p.unit || 'pz',
+        expiry_date: p.expiry_date || new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0],
+        owner: p.owner || 'shared' // Usa l'owner passato o default
+    }));
+    
+    setProducts(prev => [...prev, ...formattedProducts]);
+  };
+
+  const addToShoppingList = (items) => {
+    const itemsToAdd = Array.isArray(items) ? items : [items];
+    const formattedItems = itemsToAdd.map(item => ({
+        id: Date.now() + Math.random(),
+        name: item.name,
+        icon: item.icon || '🛒',
+        quantity: item.qty || 1,
+        unit: item.unit || 'pz',
+        department: 'dispensa',
+        owners: ['shared'], // Default
+        is_checked: false
+    }));
+    setShoppingList(prev => [...prev, ...formattedItems]);
+  };
+
+  // Context value
+  const value = {
+    products,
+    shoppingList,
+    setShoppingList,
+    recipes,
+    meals,
+    addRecipe,
+    updateProduct,
+    removeProduct,
+    addProducts,
+    addToShoppingList,
+    consumeIngredients,
+    updateMealInCalendar,
+    removeMealFromCalendar,
+    // Helpers derived
+    expiringProducts: useMemo(() => {
+        return products
+          .filter(p => getDaysUntilExpiry(p.expiry_date) <= 3)
+          .sort((a, b) => getDaysUntilExpiry(a.expiry_date) - getDaysUntilExpiry(b.expiry_date));
+    }, [products])
+  };
+
+  return (
+    <ProductsContext.Provider value={value}>
+      {children}
+    </ProductsContext.Provider>
+  );
 }
 
-export function useProducts() {
-  const context = useContext(ProductsContext);
-  if (!context) throw new Error('useProducts must be used within a ProductsProvider');
-  return context;
-}
+export const useProducts = () => useContext(ProductsContext);
