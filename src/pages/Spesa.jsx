@@ -9,8 +9,7 @@ import {
   Edit3,
   Check,
   Filter,
-  CheckCheck,
-  Circle
+  X 
 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import AvatarStack from '../components/spesa/AvatarStack';
@@ -40,7 +39,7 @@ const departments = [
 
 export default function Spesa() {
   const [items, setItems] = useState(initialItems);
-  const [filterOwner, setFilterOwner] = useState(null); // null = tutti
+  const [filterOwner, setFilterOwner] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedDepartments, setExpandedDepartments] = useState(
     departments.reduce((acc, dept) => ({ ...acc, [dept.id]: true }), {})
@@ -52,13 +51,11 @@ export default function Spesa() {
   const [deleteItem, setDeleteItem] = useState(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-  // Usa il contesto dei prodotti per aggiungere all'inventario
   const { addProducts } = useProducts();
 
-  // Filtra items per proprietario
+  // Filtra items
   const filteredItems = useMemo(() => {
     if (!filterOwner) return items;
-    // 'shared' = prodotti condivisi tra TUTTI i coinquilini
     if (filterOwner === 'shared') {
       return items.filter(item => 
         item.owners.length === ROOMMATES.length && 
@@ -68,12 +65,10 @@ export default function Spesa() {
     return items.filter(item => item.owners.includes(filterOwner));
   }, [items, filterOwner]);
 
-  // Controlla se tutti i prodotti filtrati sono selezionati
   const allChecked = useMemo(() => {
     return filteredItems.length > 0 && filteredItems.every(item => item.is_checked);
   }, [filteredItems]);
 
-  // Handler per selezionare/deselezionare tutti
   const toggleAllItems = () => {
     const filteredIds = filteredItems.map(item => item.id);
     setItems(prev => prev.map(item => 
@@ -81,15 +76,8 @@ export default function Spesa() {
         ? { ...item, is_checked: !allChecked }
         : item
     ));
-    
-    if (allChecked) {
-      toast.info('Tutti i prodotti sono stati deselezionati');
-    } else {
-      toast.success('Tutti i prodotti aggiunti al carrello!');
-    }
   };
 
-  // Raggruppa per reparto
   const itemsByDepartment = useMemo(() => {
     return departments.map(dept => ({
       ...dept,
@@ -98,18 +86,10 @@ export default function Spesa() {
     })).filter(dept => dept.items.length > 0 || dept.checkedItems.length > 0);
   }, [filteredItems]);
 
-  // Statistiche
-  const stats = useMemo(() => {
-    const unchecked = filteredItems.filter(i => !i.is_checked);
-    const checked = filteredItems.filter(i => i.is_checked);
-    return { unchecked: unchecked.length, checked: checked.length, total: filteredItems.length };
-  }, [filteredItems]);
-
   const checkedItems = useMemo(() => {
     return items.filter(i => i.is_checked);
   }, [items]);
 
-  // Handlers
   const toggleCheck = (itemId) => {
     setItems(prev => prev.map(item => 
       item.id === itemId ? { ...item, is_checked: !item.is_checked } : item
@@ -137,14 +117,9 @@ export default function Spesa() {
   };
 
   const handleCheckout = (productsToAdd) => {
-    // Rimuovi i prodotti dalla lista della spesa
     const checkedIds = checkedItems.map(i => i.id);
     setItems(prev => prev.filter(item => !checkedIds.includes(item.id)));
-    
-    // Aggiungi i prodotti all'inventario
     addProducts(productsToAdd);
-    
-    // Mostra conferma
     toast.success(`${productsToAdd.length} prodotti aggiunti all'inventario!`, {
       description: 'Puoi vederli nella sezione Inventario'
     });
@@ -157,33 +132,33 @@ export default function Spesa() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -100 }}
-      className={`flex items-center gap-3 p-3 rounded-2xl transition-all ${
-        item.is_checked ? 'bg-[#3A5A40]/5' : 'bg-white'
+      className={`flex items-center gap-3 p-3 rounded-2xl transition-all border ${
+        item.is_checked 
+          ? 'bg-[#F2F0E9]/50 border-transparent opacity-60' 
+          : 'bg-white border-transparent shadow-sm'
       }`}
     >
-      {/* Checkbox */}
       <button
         onClick={() => toggleCheck(item.id)}
-        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
           item.is_checked 
             ? 'bg-[#3A5A40] border-[#3A5A40]' 
-            : 'border-gray-300'
+            : 'border-gray-300 hover:border-[#3A5A40]'
         }`}
       >
         {item.is_checked && <Check className="w-3.5 h-3.5 text-white" />}
       </button>
 
-      {/* Icon & Info */}
       <div 
-        className="flex-1 flex items-center gap-3 min-w-0"
+        className="flex-1 flex items-center gap-3 min-w-0 cursor-pointer"
         onClick={() => setEditingItem(item)}
       >
-        <span className={`text-xl ${item.is_checked ? 'grayscale opacity-50' : ''}`}>
+        <span className={`text-2xl ${item.is_checked ? 'grayscale' : ''}`}>
           {item.icon}
         </span>
         <div className="flex-1 min-w-0">
-          <p className={`font-medium text-sm ${
-            item.is_checked ? 'text-gray-400 line-through' : 'text-[#1A1A1A]'
+          <p className={`font-medium text-[15px] ${
+            item.is_checked ? 'text-gray-500 line-through' : 'text-[#1A1A1A]'
           }`}>
             {item.name}
           </p>
@@ -193,191 +168,165 @@ export default function Spesa() {
         </div>
       </div>
 
-      {/* Avatar */}
-      <AvatarStack owners={item.owners} size="xs" />
-
-      {/* Actions */}
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => setEditingItem(item)}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100"
-        >
-          <Edit3 className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => setDeleteItem(item)}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+      <div className="shrink-0">
+         <AvatarStack owners={item.owners} size="xs" />
       </div>
+
+      {!item.is_checked && (
+        <div className="flex items-center gap-1 pl-1">
+          <button
+            onClick={() => setDeleteItem(item)}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F7F6F3] pb-32">
+    <div className={`min-h-screen bg-[#F7F6F3] transition-all ${checkedItems.length > 0 ? 'pb-40' : 'pb-24'}`}>
       <Toaster position="top-center" richColors />
       
-      {/* Header */}
-      <div className="bg-[#3A5A40] text-white px-5 pt-12 pb-6 rounded-b-3xl">
+      {/* --- HEADER --- */}
+      <div className="sticky top-0 z-20 bg-[#F7F6F3]/95 backdrop-blur-sm px-5 pt-12 pb-2">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">Lista della spesa</h1>
+          <div>
+             <h1 className="text-3xl font-bold text-[#1A1A1A]">Spesa</h1>
+             <p className="text-[#666666] text-sm mt-1">
+                {items.length === 0 ? 'Lista vuota' : `${items.length} prodotti in lista`}
+             </p>
+          </div>
+
           <div className="flex items-center gap-2">
-            {/* Select All Button */}
+            {/* PULSANTE TESTUALE PER SELEZIONE (Migliorato) */}
             {filteredItems.length > 0 && (
               <button
                 onClick={toggleAllItems}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                  allChecked ? 'bg-white/20' : 'bg-white/10 hover:bg-white/20'
+                className={`h-10 px-4 rounded-full flex items-center justify-center transition-all text-xs font-bold tracking-wide active:scale-95 ${
+                  allChecked 
+                    ? 'bg-gray-200 text-gray-600' 
+                    : 'bg-[#3A5A40] text-white shadow-md shadow-[#3A5A40]/20'
                 }`}
-                title={allChecked ? 'Deseleziona tutti' : 'Seleziona tutti'}
               >
-                {allChecked ? (
-                  <Circle className="w-5 h-5" />
-                ) : (
-                  <CheckCheck className="w-5 h-5" />
-                )}
+                {allChecked ? "Deseleziona" : "Seleziona tutto"}
               </button>
             )}
-            {/* Add Button */}
+            
             <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border ${
+                showFilters || filterOwner 
+                  ? 'bg-[#3A5A40] text-white border-transparent' 
+                  : 'bg-white text-gray-500 border-gray-200'
+              }`}
+            >
+              {filterOwner ? <div className="w-2 h-2 bg-white rounded-full absolute top-2 right-2" /> : null}
+              <Filter className="w-5 h-5" />
+            </button>
+
+             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-colors bg-white/10 hover:bg-white/20"
+              className="w-10 h-10 rounded-full bg-[#1A1A1A] text-white flex items-center justify-center shadow-md active:scale-95 transition-transform"
             >
               <Plus className="w-5 h-5" />
             </button>
-            {/* Filter Button */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                showFilters || filterOwner ? 'bg-white/20' : 'bg-white/10'
-              }`}
-            >
-              <Filter className="w-5 h-5" />
-            </button>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 bg-white/10 rounded-2xl p-3">
-            <p className="text-white/70 text-xs">Da comprare</p>
-            <p className="text-2xl font-bold">{stats.unchecked}</p>
-          </div>
-          <div className="flex-1 bg-white/10 rounded-2xl p-3">
-            <p className="text-white/70 text-xs">Nel carrello</p>
-            <p className="text-2xl font-bold">{stats.checked}</p>
-          </div>
-        </div>
-
-        {/* Filters */}
+        {/* Filters Area */}
         <AnimatePresence>
           {showFilters && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
+              className="overflow-hidden pb-4"
             >
-              <div className="mt-4 pt-4 border-t border-white/20">
-                <p className="text-white/70 text-sm mb-2">Filtra per persona</p>
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                <button
+                  onClick={() => setFilterOwner(null)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border ${
+                    !filterOwner 
+                      ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]' 
+                      : 'bg-white text-gray-600 border-gray-200'
+                  }`}
+                >
+                  Tutti
+                </button>
+                <button
+                  onClick={() => setFilterOwner('shared')}
+                  className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all border ${
+                    filterOwner === 'shared' 
+                      ? 'bg-[#A3B18A] border-[#A3B18A] text-white' 
+                      : 'bg-white border-gray-200'
+                  }`}
+                >
+                  🏠
+                </button>
+                {ROOMMATES.map((roommate) => (
                   <button
-                    onClick={() => setFilterOwner(null)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                      !filterOwner 
-                        ? 'bg-white text-[#3A5A40]' 
-                        : 'bg-white/10 text-white'
+                    key={roommate.id}
+                    onClick={() => setFilterOwner(roommate.id)}
+                    className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center font-bold text-sm transition-all border-2 ${
+                      filterOwner === roommate.id 
+                        ? 'border-[#3A5A40] scale-110' 
+                        : 'border-transparent bg-white'
                     }`}
+                    style={{ 
+                        backgroundColor: filterOwner === roommate.id ? 'white' : 'white',
+                        color: filterOwner === roommate.id ? '#1A1A1A' : '#666'
+                    }}
                   >
-                    Vedi tutto
+                     <div className={`w-full h-full rounded-full flex items-center justify-center text-white ${roommate.color}`}>
+                        {roommate.initial}
+                     </div>
                   </button>
-                  {/* Filtro Condivisi (tutti i coinquilini) */}
-                  <button
-                    onClick={() => setFilterOwner('shared')}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                      filterOwner === 'shared' 
-                        ? 'bg-[#A3B18A] ring-2 ring-offset-2 ring-offset-[#3A5A40] ring-white' 
-                        : 'bg-white/10'
-                    }`}
-                  >
-                    🏠
-                  </button>
-                  {ROOMMATES.map((roommate) => (
-                    <button
-                      key={roommate.id}
-                      onClick={() => setFilterOwner(roommate.id)}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-all ${
-                        filterOwner === roommate.id 
-                          ? `${roommate.color} ring-2 ring-offset-2 ring-offset-[#3A5A40] ring-white text-white` 
-                          : 'bg-white/10 text-white'
-                      }`}
-                    >
-                      {roommate.initial}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Content */}
-      <div className="px-5 py-4 space-y-4">
+      {/* --- CONTENT LIST --- */}
+      <div className="px-5 space-y-6 mt-2">
         {itemsByDepartment.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 rounded-full bg-[#3A5A40]/10 flex items-center justify-center mx-auto mb-4">
-              <ShoppingCart className="w-10 h-10 text-[#3A5A40]" />
-            </div>
-            <h3 className="text-lg font-semibold text-[#1A1A1A] mb-2">Lista vuota</h3>
-            <p className="text-[#666666]">Aggiungi prodotti alla lista della spesa</p>
+          <div className="text-center py-20 opacity-50">
+            <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+            <p>Nessun prodotto trovato</p>
           </div>
         ) : (
           itemsByDepartment.map((dept) => (
-            <div key={dept.id} className="bg-white rounded-3xl overflow-hidden shadow-sm">
-              {/* Department Header */}
-              <button
+            <div key={dept.id}>
+              <div 
+                className="flex items-center gap-2 mb-3 px-1 cursor-pointer"
                 onClick={() => toggleDepartment(dept.id)}
-                className="w-full flex items-center justify-between p-4 bg-[#F2F0E9]"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{dept.icon}</span>
-                  <span className="font-semibold text-[#1A1A1A]">{dept.name}</span>
-                  <span className="text-sm text-[#666666]">
-                    ({dept.items.length + dept.checkedItems.length})
+                  <span className="text-lg">{dept.icon}</span>
+                  <h3 className="font-bold text-[#1A1A1A]">{dept.name}</h3>
+                  <span className="text-xs text-gray-400 font-medium ml-auto">
+                    {dept.items.length + dept.checkedItems.length}
                   </span>
-                </div>
-                {expandedDepartments[dept.id] ? (
-                  <ChevronUp className="w-5 h-5 text-[#666666]" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-[#666666]" />
-                )}
-              </button>
+                  {expandedDepartments[dept.id] ? <ChevronUp className="w-4 h-4 text-gray-400"/> : <ChevronDown className="w-4 h-4 text-gray-400"/>}
+              </div>
 
-              {/* Items */}
               <AnimatePresence>
                 {expandedDepartments[dept.id] && (
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{ height: 'auto' }}
                     exit={{ height: 0 }}
-                    className="overflow-hidden"
+                    className="overflow-hidden space-y-2"
                   >
-                    <div className="p-2 space-y-1">
-                      {/* Unchecked items first */}
-                      {dept.items.map((item) => (
-                        <ShoppingItem key={item.id} item={item} />
-                      ))}
-                      
-                      {/* Checked items */}
-                      {dept.checkedItems.length > 0 && dept.items.length > 0 && (
-                        <div className="h-px bg-gray-100 my-2" />
+                      {dept.items.map(item => <ShoppingItem key={item.id} item={item} />)}
+                      {dept.checkedItems.length > 0 && (
+                          <>
+                            {dept.items.length > 0 && <div className="h-px bg-gray-200/50 mx-4 my-2" />}
+                            {dept.checkedItems.map(item => <ShoppingItem key={item.id} item={item} />)}
+                          </>
                       )}
-                      {dept.checkedItems.map((item) => (
-                        <ShoppingItem key={item.id} item={item} />
-                      ))}
-                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -386,26 +335,38 @@ export default function Spesa() {
         )}
       </div>
 
-      {/* Checkout Button - Floating */}
+      {/* --- CHECKOUT BAR CORRETTA (FIX LAYOUT) --- */}
+      {/* Usiamo un container full-width invisibile, e dentro centriamo la barra */}
       <AnimatePresence>
-        {stats.checked > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-24 left-0 right-0 flex justify-center z-30"
-          >
-            <button
-              onClick={() => setIsCheckoutOpen(true)}
-              className="bg-[#3A5A40] text-white rounded-full shadow-lg px-6 py-3 font-semibold active:scale-[0.98] transition-transform"
-            >
-              Concludi spesa
-            </button>
-          </motion.div>
+        {checkedItems.length > 0 && (
+          <div className="fixed inset-x-0 bottom-[80px] z-30 pointer-events-none px-5">
+              <motion.div
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "100%", opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                // pointer-events-auto riattiva i click sulla barra
+                className="pointer-events-auto w-full max-w-md mx-auto bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-2xl p-4 flex items-center justify-between"
+              >
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nel carrello</span>
+                    <span className="text-lg font-bold text-[#3A5A40] flex items-center gap-2">
+                        {checkedItems.length} prodotti
+                    </span>
+                </div>
+
+                <button
+                    onClick={() => setIsCheckoutOpen(true)}
+                    className="bg-[#3A5A40] text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-[#3A5A40]/20 active:scale-95 transition-transform flex items-center gap-2 text-sm"
+                >
+                    Concludi spesa
+                    <ShoppingCart className="w-4 h-4" />
+                </button>
+              </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
-      {/* Modals */}
       <AnimatePresence>
         {(editingItem || isAddModalOpen) && (
           <ShoppingItemDetail
