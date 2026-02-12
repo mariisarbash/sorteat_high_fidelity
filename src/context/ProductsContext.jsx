@@ -109,6 +109,27 @@ export function ProductsProvider({ children }) {
     }));
   };
 
+  // --- RIMUOVI DAL CALENDARIO (RESET SLOT) ---
+  const removeMealFromCalendar = (slot) => {
+    setMeals(prev => prev.map(m => {
+        if (m.day === slot.day && m.type === slot.type) {
+            return { 
+                ...m, 
+                isEmpty: true, 
+                name: null, 
+                icon: null, 
+                chef: null, 
+                participants: [], 
+                servings: 0, 
+                ingredients: [], 
+                steps: [],
+                isLeftover: false 
+            };
+        }
+        return m;
+    }));
+  };
+
   const updateProduct = (id, qty) => setProducts(p => p.map(x => x.id === id ? { ...x, quantity: qty } : x));
   const removeProduct = (id) => setProducts(p => p.filter(x => x.id !== id));
   const addProducts = (newP) => setProducts(prev => [...prev, ...newP.map((p, i) => ({...p, id: Date.now()+i, category: 'frigo', expiry_date: '2026-06-01'}))]);
@@ -121,7 +142,7 @@ export function ProductsProvider({ children }) {
 
   const value = {
     products, shoppingList, setShoppingList, recipes, 
-    meals, updateMealInCalendar,
+    meals, updateMealInCalendar, removeMealFromCalendar,
     updateProduct, removeProduct, addProducts, addRecipe, addToShoppingList, consumeIngredients, 
     expiringProducts, getDaysUntilExpiry, convertToBaseUnit, areUnitsCompatible
   };

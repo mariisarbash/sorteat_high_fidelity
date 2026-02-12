@@ -24,8 +24,7 @@ const ROOMMATES = [
 ];
 
 export default function MealStream() {
-  // FIX CRASH: Recupero 'meals' dal context invece che useState locale
-  const { recipes, addRecipe, products, meals, updateMealInCalendar } = useProducts();
+  const { recipes, addRecipe, products, meals, updateMealInCalendar, removeMealFromCalendar } = useProducts();
 
   const [selectedMeal, setSelectedMeal] = useState(null); 
   const [isPlanningOpen, setIsPlanningOpen] = useState(false);
@@ -38,7 +37,6 @@ export default function MealStream() {
   const days = [0, 1, 2, 3];
 
   const getMealForDay = (dayOffset, mealType) => {
-    // FIX SAFEGUARD: Aggiunto controllo se meals è caricato
     return meals ? meals.find(m => m.day === dayOffset && m.type === mealType) : null;
   };
 
@@ -52,6 +50,44 @@ export default function MealStream() {
     } else {
       setSelectedMeal(meal);
     }
+  };
+
+  // --- GESTIONE RIMOZIONE SICURA (PREVENZIONE ERRORI) ---
+  const handleRemoveMeal = () => {
+    if (!selectedMeal) return;
+    
+    // Toast con azione di conferma invece di window.confirm (più elegante)
+    toast("Vuoi davvero eliminare questo pasto?", {
+        action: {
+            label: 'Elimina',
+            onClick: () => {
+                removeMealFromCalendar({ day: selectedMeal.day, type: selectedMeal.type });
+                setSelectedMeal(null);
+                toast.success("Pasto rimosso correttamente");
+            }
+        },
+        cancel: {
+            label: 'Annulla',
+        },
+        duration: 4000,
+    });
+  };
+
+  // --- GESTIONE SOSTITUZIONE SICURA (RECUPERO ERRORI) ---
+  const handleReplaceMeal = () => {
+    if (!selectedMeal) return;
+    const slotToReplace = { day: selectedMeal.day, type: selectedMeal.type };
+    
+    // FIX: NON rimuoviamo il pasto vecchio subito!
+    // Chiudiamo solo il dettaglio e apriamo il planner.
+    // Se l'utente chiude il planner senza scegliere nulla, il vecchio pasto rimane.
+    setSelectedMeal(null);
+    
+    setTimeout(() => {
+        setPlanningSlot(slotToReplace);
+        setPlanningMode('menu');
+        setIsPlanningOpen(true);
+    }, 200);
   };
 
   const handleQuickAdd = (recipe) => {
@@ -69,6 +105,7 @@ export default function MealStream() {
             steps: recipe.steps 
           };
 
+    // Qui sovrascriviamo, sia che fosse vuoto o pieno (caso sostituzione)
     updateMealInCalendar(planningSlot, mealData);
     setIsPlanningOpen(false);
     toast.success(`${mealData.name} aggiunto al menu!`);
@@ -82,7 +119,6 @@ export default function MealStream() {
 
   const handleSaveNewRecipe = (recipeData) => {
     if (!planningSlot) return;
-    
     updateMealInCalendar(planningSlot, {
         name: recipeData.name,
         icon: recipeData.icon,
@@ -92,7 +128,6 @@ export default function MealStream() {
         ingredients: recipeData.ingredients,
         steps: recipeData.steps
     });
-
     addRecipe(recipeData);
     toast.success('Ricetta salvata e pianificata! 👨‍🍳');
   };
@@ -150,7 +185,6 @@ export default function MealStream() {
         })}
       </div>
 
-      {/* --- MODALE SCELTA & GENERATORE --- */}
       <AnimatePresence>
         {isPlanningOpen && (
             <motion.div
@@ -169,7 +203,6 @@ export default function MealStream() {
                         <>
                             <h3 className="text-lg font-bold text-[#1A1A1A] mb-4">Cosa cuciniamo?</h3>
                             <div className="space-y-3">
-                                {/* Tasto Generatore AI */}
                                 <button 
                                     onClick={startMockAI}
                                     className="w-full p-4 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white rounded-2xl flex items-center gap-3 active:scale-[0.98] shadow-lg shadow-violet-200"
@@ -181,7 +214,6 @@ export default function MealStream() {
                                     </div>
                                 </button>
 
-                                {/* Libreria Ricette */}
                                 {recipes && recipes.length > 0 && (
                                     <div className="pt-2">
                                         <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2 px-1">Le tue ricette</p>
@@ -212,7 +244,6 @@ export default function MealStream() {
                             </div>
                         </>
                     ) : (
-                        /* VISTA MOCK SELEZIONE AI */
                         <>
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-bold text-[#1A1A1A] flex items-center gap-2">
@@ -271,7 +302,9 @@ export default function MealStream() {
       <RecipeDetailModal 
         meal={selectedMeal} 
         isOpen={!!selectedMeal && !selectedMeal.isEmpty} 
-        onClose={() => setSelectedMeal(null)} 
+        onClose={() => setSelectedMeal(null)}
+        onRemove={handleRemoveMeal}
+        onReplace={handleReplaceMeal}
       />
     </div>
   );

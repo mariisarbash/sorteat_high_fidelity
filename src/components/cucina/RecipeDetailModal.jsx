@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Users, Check, Plus, AlertCircle, ChefHat, MessageCircle, ShoppingCart } from 'lucide-react';
+// FIX: Aggiunti Trash2 e RefreshCw
+import { X, Clock, Users, Check, Plus, AlertCircle, ChefHat, MessageCircle, ShoppingCart, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProducts } from '../../context/ProductsContext';
 
@@ -10,7 +11,7 @@ const ROOMMATES = [
   { id: 'pile', label: 'P', color: 'bg-purple-500' },
 ];
 
-export default function RecipeDetailModal({ meal, isOpen, onClose }) {
+export default function RecipeDetailModal({ meal, isOpen, onClose, onRemove, onReplace }) {
   const { products, addToShoppingList, consumeIngredients, convertToBaseUnit, areUnitsCompatible } = useProducts();
   const [activeTab, setActiveTab] = useState('ingredients');
   const [addedIngredients, setAddedIngredients] = useState([]);
@@ -18,7 +19,6 @@ export default function RecipeDetailModal({ meal, isOpen, onClose }) {
   const ingredientsStatus = useMemo(() => {
     if (!meal || meal.isLeftover) return [];
     
-    // Normalizzazione ingredienti (fallback se dati sporchi)
     let currentIngredients = meal.ingredients || [];
     if (currentIngredients.length === 0 && meal.name?.includes('Carbonara')) {
        currentIngredients = [
@@ -30,29 +30,23 @@ export default function RecipeDetailModal({ meal, isOpen, onClose }) {
     }
 
     return currentIngredients.map(ing => {
-      // Trova prodotto in inventario
       const inventoryItem = products.find(p => p.name.toLowerCase().includes(ing.name.toLowerCase()));
-      
       let status = 'MISSING';
       let owner = null;
 
       if (inventoryItem) {
-        // --- LOGICA DI CONFRONTO CON UNITÀ ---
         const invQtyBase = convertToBaseUnit(inventoryItem.quantity, inventoryItem.unit);
         const reqQtyBase = convertToBaseUnit(ing.qty, ing.unit);
         const compatible = areUnitsCompatible(inventoryItem.unit, ing.unit);
 
-        // Se le unità sono compatibili, controlla le quantità convertite
         if (compatible && invQtyBase >= reqQtyBase) {
            status = 'AVAILABLE';
            owner = inventoryItem.owner;
            if (owner !== 'mari' && owner !== 'shared') status = 'ASK_NEEDED';
         } else if (compatible) {
-            status = 'INSUFFICIENT'; // C'è ma non basta
+            status = 'INSUFFICIENT'; 
         } else {
-            // Unità incompatibili (es: uova pz vs kg), assumiamo OK se c'è il prodotto per ora, o INSUFFICIENT
-            // Per il mock, se c'è l'oggetto, diamo ok se non sappiamo convertire
-            status = 'AVAILABLE'; 
+            status = 'AVAILABLE'; // Mock fallback per unità strane
             owner = inventoryItem.owner;
         }
       }
@@ -87,8 +81,6 @@ export default function RecipeDetailModal({ meal, isOpen, onClose }) {
   if (!isOpen || !meal) return null;
 
   const chefInfo = ROOMMATES.find(r => r.label === meal.chef || r.id === meal.chef?.toLowerCase());
-
-  // Logica visualizzazione partecipanti (Avatar)
   const participantsList = meal.participants || [];
 
   return (
@@ -115,10 +107,21 @@ export default function RecipeDetailModal({ meal, isOpen, onClose }) {
                 <span className="flex items-center gap-1"><Users className="w-4 h-4"/> {meal.servings} persone</span>
               </div>
             </div>
-            <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 bg-black/20 backdrop-blur rounded-full flex items-center justify-center text-white"><X className="w-5 h-5"/></button>
+            
+            {/* Action Buttons (Close, Remove, Replace) */}
+            <div className="absolute top-4 right-4 flex gap-2">
+                <button onClick={onReplace} className="w-8 h-8 bg-black/20 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-black/30 transition-colors">
+                    <RefreshCw className="w-4 h-4" />
+                </button>
+                <button onClick={onRemove} className="w-8 h-8 bg-red-500/80 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={onClose} className="w-8 h-8 bg-black/20 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-black/30 transition-colors">
+                    <X className="w-5 h-5"/>
+                </button>
+            </div>
           </div>
 
-          {/* Info Chef & Partecipanti (NUOVO DESIGN) */}
           <div className="px-5 py-4 bg-white border-b border-gray-100 flex items-center justify-between">
              <div className="flex items-center gap-3">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${chefInfo?.color || 'bg-gray-400'}`}>
@@ -130,16 +133,13 @@ export default function RecipeDetailModal({ meal, isOpen, onClose }) {
                 </div>
              </div>
 
-             {/* Partecipanti come Avatar */}
              <div className="flex flex-col items-end">
                 <p className="text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">Per chi?</p>
                 <div className="flex -space-x-2">
                     {participantsList.map((pName, i) => {
-                        // Cerca se il partecipante è un coinquilino noto
                         const r = ROOMMATES.find(rm => rm.label === pName || rm.id === pName.toLowerCase());
                         const color = r ? r.color : 'bg-gray-300';
                         const initial = pName[0];
-                        
                         return (
                             <div key={i} className={`w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-bold ${color}`} title={pName}>
                                 {initial}
@@ -151,7 +151,6 @@ export default function RecipeDetailModal({ meal, isOpen, onClose }) {
              </div>
           </div>
 
-          {/* Tabs */}
           {!meal.isLeftover && (
             <div className="flex p-2 bg-white border-b border-gray-100 shrink-0">
                 <button onClick={() => setActiveTab('ingredients')} className={`flex-1 py-3 rounded-xl text-sm font-bold ${activeTab === 'ingredients' ? 'bg-[#3A5A40] text-white' : 'text-gray-500'}`}>Ingredienti</button>
@@ -159,7 +158,6 @@ export default function RecipeDetailModal({ meal, isOpen, onClose }) {
             </div>
           )}
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto p-5 bg-[#F7F6F3]">
             {meal.isLeftover ? (
                 <div className="text-center py-10 space-y-4">
