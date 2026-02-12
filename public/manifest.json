@@ -1,16 +1,16 @@
 {
-  "name": "Sorteat",
-  "short_name": "Sorteat",
-  "description": "Gestisci la tua dispensa e la lista della spesa",
+  "name": "sorteat",
+  "short_name": "sorteat",
+  "description": "Handling all the thinking so you can focus on the eating",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F7F6F3",
   "theme_color": "#3A5A40",
   "icons": [
     {
-      "src": "https://base44.com/logo_v2.svg",
+      "src": "/logo_senza_sfondo.png",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/png"
     }
   ]
 }

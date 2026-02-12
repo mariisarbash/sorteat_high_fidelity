@@ -8,7 +8,9 @@ import {
   Trash2,
   Edit3,
   Check,
-  Filter
+  Filter,
+  CheckCheck,
+  Circle
 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import AvatarStack from '../components/spesa/AvatarStack';
@@ -65,6 +67,27 @@ export default function Spesa() {
     }
     return items.filter(item => item.owners.includes(filterOwner));
   }, [items, filterOwner]);
+
+  // Controlla se tutti i prodotti filtrati sono selezionati
+  const allChecked = useMemo(() => {
+    return filteredItems.length > 0 && filteredItems.every(item => item.is_checked);
+  }, [filteredItems]);
+
+  // Handler per selezionare/deselezionare tutti
+  const toggleAllItems = () => {
+    const filteredIds = filteredItems.map(item => item.id);
+    setItems(prev => prev.map(item => 
+      filteredIds.includes(item.id) 
+        ? { ...item, is_checked: !allChecked }
+        : item
+    ));
+    
+    if (allChecked) {
+      toast.info('Tutti i prodotti deselezionati');
+    } else {
+      toast.success('Tutti i prodotti nel carrello!');
+    }
+  };
 
   // Raggruppa per reparto
   const itemsByDepartment = useMemo(() => {
@@ -200,7 +223,23 @@ export default function Spesa() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold">Lista della spesa</h1>
           <div className="flex items-center gap-2">
-            {/* Add Button - spostato nell'header */}
+            {/* Select All Button */}
+            {filteredItems.length > 0 && (
+              <button
+                onClick={toggleAllItems}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                  allChecked ? 'bg-white/20' : 'bg-white/10 hover:bg-white/20'
+                }`}
+                title={allChecked ? 'Deseleziona tutti' : 'Seleziona tutti'}
+              >
+                {allChecked ? (
+                  <Circle className="w-5 h-5" />
+                ) : (
+                  <CheckCheck className="w-5 h-5" />
+                )}
+              </button>
+            )}
+            {/* Add Button */}
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="w-10 h-10 rounded-full flex items-center justify-center transition-colors bg-white/10 hover:bg-white/20"
@@ -347,23 +386,20 @@ export default function Spesa() {
         )}
       </div>
 
-      {/* Checkout Bar */}
+      {/* Checkout Button - Floating */}
       <AnimatePresence>
         {stats.checked > 0 && (
           <motion.div
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            exit={{ y: 100 }}
-            className="fixed bottom-20 left-5 right-5 max-w-md mx-auto z-30"
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-24 left-0 right-0 flex justify-center z-30"
           >
             <button
               onClick={() => setIsCheckoutOpen(true)}
-              className="w-full py-4 bg-[#3A5A40] rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-[0.98] transition-transform"
+              className="bg-[#3A5A40] text-white rounded-full shadow-lg px-6 py-3 font-semibold active:scale-[0.98] transition-transform"
             >
-              <ShoppingCart className="w-5 h-5 text-white" />
-              <span className="font-semibold text-white">
-                Concludi spesa ({stats.checked} prodotti)
-              </span>
+              Concludi spesa
             </button>
           </motion.div>
         )}
