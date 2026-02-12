@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { X, Camera, Mic, ChefHat } from 'lucide-react';
+import { X, Camera, Mic, ChefHat, PenLine } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function AddAction() {
@@ -11,15 +11,23 @@ export default function AddAction() {
     {
       id: 'scan',
       icon: Camera,
-      label: 'Scansiona Scontrino',
+      label: 'Scansiona scontrino',
       description: 'Aggiungi prodotti automaticamente',
       color: 'bg-blue-500',
       page: 'ScanReceipt'
     },
     {
+      id: 'manual',
+      icon: PenLine,
+      label: 'Inserisci prodotto',
+      description: 'Aggiungi prodotti manualmente',
+      color: 'bg-amber-500',
+      page: 'ManualProductEntry'
+    },
+    {
       id: 'voice',
       icon: Mic,
-      label: 'Input Vocale',
+      label: 'Input vocale',
       description: 'Parla per aggiungere o rimuovere',
       color: 'bg-purple-500',
       page: 'VoiceInput'
@@ -27,7 +35,7 @@ export default function AddAction() {
     {
       id: 'cook',
       icon: ChefHat,
-      label: 'Svuota Frigo',
+      label: 'Svuota frigo',
       description: 'Cucina con quello che hai',
       color: 'bg-[#3A5A40]',
       page: 'EmptyFridge'

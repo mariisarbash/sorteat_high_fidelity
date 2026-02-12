@@ -13,7 +13,7 @@ export default function Layout({ children, currentPageName }) {
   ];
 
   // Pages where the navigation bar should be hidden
-  const hideNavPages = ['Profilo', 'AddAction', 'ScanReceipt', 'VoiceInput', 'EmptyFridge'];
+  const hideNavPages = ['Profilo', 'AddAction', 'ScanReceipt', 'VoiceInput', 'EmptyFridge', 'ManualProductEntry'];
 
   const shouldShowNav = !hideNavPages.includes(currentPageName);
 

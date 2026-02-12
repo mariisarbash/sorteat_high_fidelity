@@ -83,9 +83,9 @@ export default function Spesa() {
     ));
     
     if (allChecked) {
-      toast.info('Tutti i prodotti deselezionati');
+      toast.info('Tutti i prodotti sono stati deselezionati');
     } else {
-      toast.success('Tutti i prodotti nel carrello!');
+      toast.success('Tutti i prodotti aggiunti al carrello!');
     }
   };
 

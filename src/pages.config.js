@@ -53,6 +53,7 @@ import AddAction from './pages/AddAction';
 import ScanReceipt from './pages/ScanReceipt';
 import VoiceInput from './pages/VoiceInput';
 import EmptyFridge from './pages/EmptyFridge';
+import ManualProductEntry from './pages/ManualProductEntry';
 import Spesa from './pages/Spesa';
 import Cucina from './pages/Cucina';
 import Profilo from './pages/Profilo';
@@ -66,6 +67,7 @@ export const PAGES = {
     "ScanReceipt": ScanReceipt,
     "VoiceInput": VoiceInput,
     "EmptyFridge": EmptyFridge,
+    "ManualProductEntry": ManualProductEntry,
     "Spesa": Spesa,
     "Cucina": Cucina,
     "Profilo": Profilo,
