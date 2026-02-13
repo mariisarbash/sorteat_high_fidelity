@@ -34,40 +34,6 @@ export default function Cucina() {
       
       {/* 1. Calendario Pasti (Spostato SOPRA) */}
       <MealStream />
-      
-      {/* 2. Widget Svuota Frigo (Spostato SOTTO) */}
-      <div className="px-5 mb-6 mt-4">
-        <div className="bg-white rounded-3xl p-5 card-shadow">
-          <h3 className="font-semibold text-[#1A1A1A] mb-3">💡 Svuota Frigo</h3>
-          
-          {suggestions.length > 0 ? (
-            <div className="space-y-2">
-              {suggestions.map(product => (
-                <div 
-                    key={product.id} 
-                    onClick={() => handleSuggestionClick(product)}
-                    className="flex items-start gap-3 p-3 bg-[#F2F0E9] rounded-xl active:scale-[0.98] transition-transform cursor-pointer"
-                >
-                  <span className="text-xl">{product.icon}</span>
-                  <div>
-                    <p className="text-sm font-bold text-[#1A1A1A] flex items-center gap-2">
-                        {product.name} in scadenza
-                        <span className="text-[10px] text-red-500 bg-red-100 px-1.5 py-0.5 rounded-md">Urgente</span>
-                    </p>
-                    <p className="text-xs text-[#666666] mt-0.5">
-                        {product.category === 'frigo' ? 'Che ne dici di una frittata?' : 'Ottimo per un primo piatto veloce.'}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-4 text-center text-gray-500 text-sm italic">
-                Nessun prodotto in scadenza. Ottimo lavoro! 👏
-            </div>
-          )}
-        </div>
-      </div>
 
     </div>
   );

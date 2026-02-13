@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
-import { getDaysUntilExpiry } from '../utils/products'; // Assicurati che questo path sia corretto per il tuo progetto
+import { getDaysUntilExpiry } from '../utils/products'; 
 
 export { getDaysUntilExpiry };
 
@@ -28,77 +28,26 @@ const initialRecipes = [
   { id: 'r1', name: 'Pasta al Pesto', icon: '🍝', prepTime: 15, servings: 2, ingredients: [{name: 'Pasta', qty: 200, unit: 'g'}, {name: 'Basilico', qty: 50, unit: 'g'}] },
 ];
 
-// FIX 2: Aggiunti ingredienti alle ricette Mock
 const initialMeals = [
   { 
-    id: 1, 
-    day: 0, 
-    type: 'pranzo', 
-    name: 'Pasta al pesto', 
-    icon: '🍝', 
-    chef: 'Mari', 
-    participants: ['Mari', 'Gio', 'Pile'], 
-    servings: 3,
-    ingredients: [
-      { name: 'Pasta', qty: 300, unit: 'g' },
-      { name: 'Basilico', qty: 50, unit: 'g' },
-      { name: 'Olio', qty: 30, unit: 'ml' },
-      { name: 'Parmigiano', qty: 50, unit: 'g' }
-    ]
+    id: 1, day: 0, type: 'pranzo', name: 'Pasta al pesto', icon: '🍝', chef: 'Mari', participants: ['Mari', 'Gio', 'Pile'], servings: 3,
+    ingredients: [ { name: 'Pasta', qty: 300, unit: 'g' }, { name: 'Basilico', qty: 50, unit: 'g' }, { name: 'Olio', qty: 30, unit: 'ml' }, { name: 'Parmigiano', qty: 50, unit: 'g' } ]
   },
   { 
-    id: 2, 
-    day: 0, 
-    type: 'cena', 
-    name: 'Carbonara', 
-    icon: '🍝', 
-    chef: 'Mari', 
-    participants: ['Mari', 'Gio'], 
-    servings: 2,
-    ingredients: [
-        { name: 'Pasta', qty: 200, unit: 'g' },
-        { name: 'Uova', qty: 3, unit: 'pz' },
-        { name: 'Guanciale', qty: 100, unit: 'g' },
-        { name: 'Pepe', qty: 5, unit: 'g' }
-    ]
+    id: 2, day: 0, type: 'cena', name: 'Carbonara', icon: '🍝', chef: 'Mari', participants: ['Mari', 'Gio'], servings: 2,
+    ingredients: [ { name: 'Pasta', qty: 200, unit: 'g' }, { name: 'Uova', qty: 3, unit: 'pz' }, { name: 'Guanciale', qty: 100, unit: 'g' }, { name: 'Pepe', qty: 5, unit: 'g' } ]
   },
   { id: 3, day: 1, type: 'pranzo', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
   { id: 4, day: 1, type: 'cena', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
   { 
-    id: 5, 
-    day: 2, 
-    type: 'pranzo', 
-    name: 'Insalatona', 
-    icon: '🥗', 
-    chef: 'Gio', 
-    participants: ['Gio', 'Pile', 'Mari'], 
-    servings: 3,
-    ingredients: [
-        { name: 'Lattuga', qty: 1, unit: 'cespo' },
-        { name: 'Pomodori', qty: 300, unit: 'g' },
-        { name: 'Mozzarella', qty: 250, unit: 'g' },
-        { name: 'Tonno', qty: 2, unit: 'scatolette' },
-        { name: 'Mais', qty: 150, unit: 'g' }
-    ] 
+    id: 5, day: 2, type: 'pranzo', name: 'Insalatona', icon: '🥗', chef: 'Gio', participants: ['Gio', 'Pile', 'Mari'], servings: 3,
+    ingredients: [ { name: 'Lattuga', qty: 1, unit: 'cespo' }, { name: 'Pomodori', qty: 300, unit: 'g' }, { name: 'Mozzarella', qty: 250, unit: 'g' }, { name: 'Tonno', qty: 2, unit: 'scatolette' }, { name: 'Mais', qty: 150, unit: 'g' } ] 
   },
   { id: 6, day: 2, type: 'cena', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
   { id: 7, day: 3, type: 'pranzo', name: null, icon: null, chef: null, participants: [], servings: 0, isEmpty: true },
   { 
-    id: 8, 
-    day: 3, 
-    type: 'cena', 
-    name: 'Pizza fatta in casa', 
-    icon: '🍕', 
-    chef: 'Pile', 
-    participants: ['Mari', 'Gio', 'Pile'], 
-    servings: 3,
-    ingredients: [
-        { name: 'Farina', qty: 500, unit: 'g' },
-        { name: 'Lievito', qty: 1, unit: 'cubetto' },
-        { name: 'Passata di pomodoro', qty: 400, unit: 'g' },
-        { name: 'Mozzarella', qty: 400, unit: 'g' },
-        { name: 'Olio', qty: 20, unit: 'ml' }
-    ]
+    id: 8, day: 3, type: 'cena', name: 'Pizza fatta in casa', icon: '🍕', chef: 'Pile', participants: ['Mari', 'Gio', 'Pile'], servings: 3,
+    ingredients: [ { name: 'Farina', qty: 500, unit: 'g' }, { name: 'Lievito', qty: 1, unit: 'cubetto' }, { name: 'Passata di pomodoro', qty: 400, unit: 'g' }, { name: 'Mozzarella', qty: 400, unit: 'g' }, { name: 'Olio', qty: 20, unit: 'ml' } ]
   },
 ];
 
@@ -110,7 +59,7 @@ export function ProductsProvider({ children }) {
   const [recipes, setRecipes] = useState(initialRecipes);
   const [meals, setMeals] = useState(initialMeals);
 
-  // --- LOGICA CONVERSIONE ---
+  // --- LOGICHE CONVERSIONE E CONSUMO ---
   const convertToBaseUnit = (qty, unit) => {
     const q = parseFloat(qty);
     if (isNaN(q)) return 0;
@@ -130,6 +79,30 @@ export function ProductsProvider({ children }) {
     if (mass.includes(u1Norm) && mass.includes(u2Norm)) return true;
     if (volume.includes(u1Norm) && volume.includes(u2Norm)) return true;
     return false;
+  };
+
+  // FIX 1: Funzione per controllare la disponibilità convertendo le unità
+  const checkIngredientAvailability = (ingName, requiredQty, requiredUnit) => {
+    const product = products.find(p => p.name.toLowerCase().includes(ingName.toLowerCase()));
+    
+    if (!product) return { status: 'buy', productOwner: null }; 
+
+    // Se le unità non sono le stesse (es. kg vs g), convertiamo entrambi alla base
+    let availableQty = parseFloat(product.quantity);
+    let neededQty = parseFloat(requiredQty);
+
+    if (product.unit !== requiredUnit && areUnitsCompatible(product.unit, requiredUnit)) {
+        availableQty = convertToBaseUnit(product.quantity, product.unit);
+        neededQty = convertToBaseUnit(requiredQty, requiredUnit);
+    }
+
+    if (availableQty < neededQty) return { status: 'buy', productOwner: product.owner }; 
+    
+    if (product.owner !== 'mari' && product.owner !== 'shared') {
+        return { status: 'ask', productOwner: product.owner };
+    }
+
+    return { status: 'ok', productOwner: product.owner }; 
   };
 
   const consumeIngredients = (ingredients) => {
@@ -162,7 +135,6 @@ export function ProductsProvider({ children }) {
     return consumedCount;
   };
 
-  // --- UPDATE CALENDARIO ---
   const updateMealInCalendar = (slot, newData) => {
     setMeals(prev => prev.map(m => {
         if (m.day === slot.day && m.type === slot.type) {
@@ -172,7 +144,6 @@ export function ProductsProvider({ children }) {
     }));
   };
   
-  // --- RIMUOVI DAL CALENDARIO ---
   const removeMealFromCalendar = (slot) => {
     setMeals(prev => prev.map(m => {
         if (m.day === slot.day && m.type === slot.type) {
@@ -198,18 +169,17 @@ export function ProductsProvider({ children }) {
     setProducts(prev => prev.filter(p => p.id !== productId));
   };
 
-  // FIX 4.1: addProducts ora gestisce correttamente owner e category
   const addProducts = (newProducts) => {
     const productsToAdd = Array.isArray(newProducts) ? newProducts : [newProducts];
     const formattedProducts = productsToAdd.map(p => ({
         id: Date.now() + Math.random(),
         name: p.name,
         icon: p.icon || '📦',
-        category: p.category || 'dispensa', // Usa la categoria passata o default
+        category: p.category || 'dispensa',
         quantity: parseFloat(p.quantity) || 1,
         unit: p.unit || 'pz',
         expiry_date: p.expiry_date || new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0],
-        owner: p.owner || 'shared' // Usa l'owner passato o default
+        owner: p.owner || 'shared'
     }));
     
     setProducts(prev => [...prev, ...formattedProducts]);
@@ -224,13 +194,18 @@ export function ProductsProvider({ children }) {
         quantity: item.qty || 1,
         unit: item.unit || 'pz',
         department: 'dispensa',
-        owners: ['shared'], // Default
+        // FIX 3: Usa gli owner passati (se ci sono), altrimenti shared
+        owners: item.owners && item.owners.length > 0 ? item.owners : ['shared'],
         is_checked: false
     }));
     setShoppingList(prev => [...prev, ...formattedItems]);
   };
 
-  // Context value
+  const restoreData = (prevProducts, prevShoppingList) => {
+    if (prevProducts) setProducts(prevProducts);
+    if (prevShoppingList) setShoppingList(prevShoppingList);
+  };
+
   const value = {
     products,
     shoppingList,
@@ -245,7 +220,8 @@ export function ProductsProvider({ children }) {
     consumeIngredients,
     updateMealInCalendar,
     removeMealFromCalendar,
-    // Helpers derived
+    checkIngredientAvailability, // Esposto per i modali
+    restoreData,
     expiringProducts: useMemo(() => {
         return products
           .filter(p => getDaysUntilExpiry(p.expiry_date) <= 3)

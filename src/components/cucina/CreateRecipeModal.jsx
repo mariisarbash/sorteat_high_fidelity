@@ -1,437 +1,270 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Clock, Users, Plus, Minus, Trash2, Check, Camera, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
+import { X, Plus, Clock, Users, Search, ChevronRight, Save, Trash2, Check } from 'lucide-react';
 import { useProducts } from '../../context/ProductsContext';
+import { toast } from 'sonner';
+import OwnerSelector from '../spesa/OwnerSelector';
 
-const commonEmojis = ['🍝', '🥗', '🥩', '🍲', '🥘', '🍕', '🍔', '🥟', '🍰', '🥑', '🍳'];
-const AVAILABLE_UNITS = ['pz', 'g', 'kg', 'ml', 'L', 'qb', 'conf', 'fette'];
-
-const ROOMMATES = [
-  { id: 'mari', label: 'M', color: 'bg-pink-500', name: 'Mari' },
-  { id: 'gio', label: 'G', color: 'bg-blue-500', name: 'Gio' },
-  { id: 'pile', label: 'P', color: 'bg-purple-500', name: 'Pile' },
-];
+// Lista di emoji predefinite per le ricette
+const RECIPE_EMOJIS = ['🍝', '🍕', '🥗', '🥩', '🍣', '🍲', '🍜', '🥪', '🌮', '🥘'];
 
 export default function CreateRecipeModal({ isOpen, onClose, onSave, initialData }) {
   const { products } = useProducts();
-  
-  const [mode, setMode] = useState('manual');
   const [step, setStep] = useState(1);
-  const [isScanning, setIsScanning] = useState(false);
-  const [servings, setServings] = useState(1);
-  const [selectedParticipants, setSelectedParticipants] = useState(['mari']); 
+  const [errors, setErrors] = useState({});
   
-  const [formData, setFormData] = useState({
-    name: '',
-    icon: '🍲',
-    prepTime: 30,
-    // Di default il primo ingrediente è pronto per essere selezionato (isCustom: false)
-    ingredients: [{ productId: '', name: '', qty: '', unit: 'g', isCustom: false }],
-    steps: ['']
+  const [recipeData, setRecipeData] = useState({
+    name: '', icon: '🍝', servings: 2, prepTime: 30, ingredients: [], steps: [''], participants: ['mari', 'gio'] // default esempio
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const myInventory = useMemo(() => {
-    return products.filter(p => p.owner === 'mari' || p.owner === 'shared')
-                   .sort((a, b) => a.name.localeCompare(b.name));
-  }, [products]);
+  useEffect(() => { if (initialData) setRecipeData(prev => ({ ...prev, ...initialData })); }, [initialData]);
 
-  // Inizializzazione dati
-  useEffect(() => {
-    if (initialData) {
-        const mappedIngredients = (initialData.ingredients || []).map(ing => {
-            const foundProduct = myInventory.find(p => p.name.toLowerCase().includes(ing.name.toLowerCase()));
-            return {
-                ...ing,
-                productId: foundProduct ? foundProduct.id : '',
-                isCustom: !foundProduct,
-                unit: foundProduct ? foundProduct.unit : (ing.unit || 'g')
-            };
-        });
-
-        setFormData({
-            name: initialData.name || '',
-            icon: initialData.icon || '🍲',
-            prepTime: initialData.prepTime || 30,
-            ingredients: mappedIngredients,
-            steps: initialData.steps || ['']
-        });
-        setServings(initialData.servings || 1);
-        setSelectedParticipants(['mari']); 
-    }
-  }, [initialData, myInventory]);
-
-  const updateServings = (newServings) => {
-    if (newServings < 1) return;
-    if (newServings < selectedParticipants.length) {
-        toast.warning("Riduci i partecipanti prima di diminuire le porzioni.");
-        return;
-    }
-    const ratio = newServings / servings;
-    setFormData(prev => ({
-        ...prev,
-        ingredients: prev.ingredients.map(ing => ({
-            ...ing,
-            qty: ing.qty && !isNaN(ing.qty) ? (parseFloat(ing.qty) * ratio).toFixed(ing.unit === 'pz' ? 0 : 0) : ing.qty
-        }))
-    }));
-    setServings(newServings);
+  const validateStep1 = () => {
+      if (!recipeData.name.trim()) { setErrors({ name: true }); return false; }
+      setErrors({}); return true;
+  };
+  const validateStep2 = () => {
+      if (recipeData.ingredients.length === 0) { toast.error("Aggiungi almeno un ingrediente!"); return false; }
+      return true;
   };
 
-  const toggleParticipant = (roommateId) => {
-    if (roommateId === 'mari') return;
-    const isSelected = selectedParticipants.includes(roommateId);
-    if (isSelected) {
-        setSelectedParticipants(prev => prev.filter(id => id !== roommateId));
-        updateServings(Math.max(1, servings - 1));
-    } else {
-        setSelectedParticipants(prev => [...prev, roommateId]);
-        updateServings(servings + 1);
-    }
+  const handleNext = () => {
+      if (step === 1 && !validateStep1()) return;
+      if (step === 2 && !validateStep2()) return;
+      setStep(step + 1);
   };
 
-  // --- GESTIONE INGREDIENTI ---
-  const handleIngredientChange = (index, field, value) => {
-    const newIngredients = [...formData.ingredients];
-    const currentIng = newIngredients[index];
+  const handleAddIngredient = (productOrName) => {
+    const isNew = typeof productOrName === 'string';
+    const ingName = isNew ? productOrName : productOrName.name;
+    const ingUnit = isNew ? 'pz' : (productOrName.unit || 'pz');
 
-    if (field === 'productId') {
-        if (value === 'CUSTOM_ITEM') {
-            // Utente vuole inserire roba non in dispensa
-            currentIng.productId = '';
-            currentIng.name = ''; 
-            currentIng.unit = 'pz'; 
-            currentIng.isCustom = true; // Switcha a input manuale
-        } else {
-            // Utente seleziona da inventario
-            const selectedProduct = myInventory.find(p => p.id === parseInt(value));
-            if (selectedProduct) {
-                currentIng.productId = selectedProduct.id;
-                currentIng.name = selectedProduct.name;
-                currentIng.unit = selectedProduct.unit || 'pz'; 
-                currentIng.isCustom = false;
-            }
-        }
-    } else if (field === 'qty') {
-        if (parseFloat(value) < 0) return; 
-        currentIng[field] = value;
-    } else {
-        currentIng[field] = value;
-    }
-
-    setFormData(prev => ({ ...prev, ingredients: newIngredients }));
-  };
-
-  // FIX: Aggiungi nuovo ingrediente come "Select" di default (isCustom: false)
-  const handleAddIngredient = () => {
-    setFormData(prev => ({
-      ...prev,
-      ingredients: [...prev.ingredients, { productId: '', name: '', qty: '', unit: 'pz', isCustom: false }]
-    }));
-  };
-
-  // Funzione per tornare alla select se si era in modalità custom
-  const handleResetToSelect = (index) => {
-    const newIngredients = [...formData.ingredients];
-    newIngredients[index] = { productId: '', name: '', qty: '', unit: 'pz', isCustom: false };
-    setFormData(prev => ({ ...prev, ingredients: newIngredients }));
+    setRecipeData(prev => {
+        const exists = prev.ingredients.find(i => i.name === ingName);
+        if (exists) return prev;
+        return { 
+            ...prev, 
+            ingredients: [...prev.ingredients, { 
+                name: ingName, 
+                qty: 1, 
+                unit: ingUnit, 
+                productId: isNew ? null : productOrName.id 
+            }] 
+        };
+    });
+    setSearchTerm('');
   };
 
   const handleRemoveIngredient = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      ingredients: prev.ingredients.filter((_, i) => i !== index)
+    setRecipeData(prev => ({ ...prev, ingredients: prev.ingredients.filter((_, i) => i !== index) }));
+  };
+
+  const updateIngredientQty = (index, field, value) => {
+    const newIngredients = [...recipeData.ingredients];
+    newIngredients[index] = { ...newIngredients[index], [field]: value };
+    setRecipeData({ ...recipeData, ingredients: newIngredients });
+  };
+
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) return [];
+    return products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [searchTerm, products]);
+
+  const handleSaveRecipe = () => {
+      if (!recipeData.name.trim()) { setStep(1); setErrors({ name: true }); return; }
+      onSave(recipeData);
+      onClose();
+  };
+
+  const handleParticipantsChange = (newParticipants) => {
+    setRecipeData(prev => ({
+        ...prev,
+        participants: newParticipants,
+        servings: newParticipants.length > 0 ? newParticipants.length : 1
     }));
-  };
-
-  const handleAddStep = () => setFormData(prev => ({ ...prev, steps: [...prev.steps, ''] }));
-  const handleRemoveStep = (index) => setFormData(prev => ({ ...prev, steps: prev.steps.filter((_, i) => i !== index) }));
-  const handleStepChange = (index, value) => {
-    const newSteps = [...formData.steps];
-    newSteps[index] = value;
-    setFormData(prev => ({ ...prev, steps: newSteps }));
-  };
-
-  const handleAIScan = () => {
-    setIsScanning(true);
-    setTimeout(() => {
-        setIsScanning(false);
-        toast.success('Funzione disponibile dal menu principale!');
-        setMode('manual');
-    }, 1500);
-  };
-
-  const handleSave = () => {
-    if (!formData.name.trim()) {
-        toast.error("Dai un nome alla tua ricetta!", { icon: '✍️' });
-        setStep(1);
-        return;
-    }
-    const invalidQty = formData.ingredients.some(i => !i.qty || parseFloat(i.qty) <= 0);
-    if (invalidQty) {
-        toast.error("Quantità non valida", { description: "Tutti gli ingredienti devono avere una quantità > 0." });
-        setStep(2);
-        return;
-    }
-    const validIngredients = formData.ingredients.filter(i => i.name && i.qty);
-    if (validIngredients.length === 0) {
-        toast.error("Mancano ingredienti", { icon: '🛑' });
-        setStep(2);
-        return;
-    }
-
-    const cleanData = {
-        ...formData,
-        servings: servings,
-        participants: selectedParticipants,
-        ingredients: validIngredients,
-        steps: formData.steps.filter(s => s.trim() !== '').length > 0 ? formData.steps : ['Procedimento non specificato']
-    };
-
-    onSave(cleanData);
-    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pointer-events-auto">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-[#F7F6F3] w-full max-w-md h-[85vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      <motion.div 
+        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+        className="relative bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
       >
-        <div className="bg-white px-5 py-4 flex justify-between items-center border-b border-gray-100 shrink-0">
-          <h3 className="font-bold text-lg text-[#1A1A1A]">
-            {mode === 'ai' ? 'Scansione AI' : (step === 1 ? 'Nuova Ricetta' : step === 2 ? 'Ingredienti' : 'Procedimento')}
-          </h3>
-          <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
+        <div className="p-6 pb-2 shrink-0 border-b border-gray-50">
+            <div className="flex justify-between items-center mb-2">
+                <div>
+                    <h2 className="text-xl font-bold text-[#1A1A1A]">
+                        {step === 1 && 'Dettagli Ricetta'}
+                        {step === 2 && 'Ingredienti'}
+                        {step === 3 && 'Preparazione'}
+                    </h2>
+                    <p className="text-xs text-gray-400">Step {step} di 3</p>
+                </div>
+                <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                    <X className="w-5 h-5 text-gray-500" />
+                </button>
+            </div>
         </div>
 
-        {mode === 'ai' ? (
-           <div className="flex-1 flex items-center justify-center flex-col p-6">
-               <Sparkles className="w-12 h-12 text-[#3A5A40] mb-4" />
-               <p className="text-gray-500 text-center">Usa il pulsante "Genera con AI" nel menu principale per la magia completa!</p>
-               <button onClick={() => setMode('manual')} className="text-[#3A5A40] font-bold mt-4 underline">Torna indietro</button>
-           </div>
-        ) : (
-          <>
-            <div className="flex-1 overflow-y-auto p-5">
-               {step === 1 && (
-                    <div className="space-y-6">
-                        {/* Sezione NOME e ICONA */}
-                        <div>
-                            <label className="text-xs font-bold text-[#666666] uppercase mb-2 block">Nome Piatto</label>
-                            <div className="flex gap-3">
-                                <div className="shrink-0 w-14 h-[50px] bg-white rounded-2xl flex items-center justify-center text-2xl border border-gray-100">
-                                    {formData.icon}
-                                </div>
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                    placeholder="Es. Pasta al Tonno"
-                                    className="flex-1 px-4 bg-white rounded-2xl text-[#1A1A1A] font-bold border border-gray-100 focus:border-[#3A5A40] outline-none"
-                                />
-                            </div>
-                            <div className="flex gap-2 overflow-x-auto py-2 no-scrollbar mt-1">
-                                {commonEmojis.map(emoji => (
-                                    <button key={emoji} onClick={() => setFormData({...formData, icon: emoji})} className="w-8 h-8 bg-white rounded-lg border border-gray-100 flex items-center justify-center shrink-0">
-                                        {emoji}
-                                    </button>
-                                ))}
+        <div className="flex-1 overflow-y-auto px-6 pb-4">
+            {step === 1 && (
+                <div className="space-y-6 pt-4">
+                    
+                    {/* Selettore Emoji Predefinite */}
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-24 h-24 bg-[#F2F0E9] rounded-full flex items-center justify-center text-5xl border-2 border-dashed border-gray-300 shadow-inner">
+                            {recipeData.icon}
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto w-full pb-2 px-1 no-scrollbar justify-start sm:justify-center">
+                            {RECIPE_EMOJIS.map(emoji => (
+                                <button
+                                    key={emoji}
+                                    onClick={() => setRecipeData({...recipeData, icon: emoji})}
+                                    className={`w-10 h-10 shrink-0 rounded-full text-xl flex items-center justify-center transition-all ${
+                                        recipeData.icon === emoji
+                                        ? 'bg-[#3A5A40] shadow-md scale-110 z-10 border-2 border-[#3A5A40]'
+                                        : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 grayscale opacity-60 hover:grayscale-0 hover:opacity-100'
+                                    }`}
+                                >
+                                    {emoji}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Nome del piatto</label>
+                        <input 
+                            type="text" 
+                            placeholder="Es. Carbonara..." 
+                            value={recipeData.name}
+                            onChange={e => { setRecipeData({...recipeData, name: e.target.value}); if(errors.name) setErrors({}); }}
+                            className={`w-full bg-gray-50 rounded-2xl p-4 font-bold text-lg outline-none border-2 transition-colors ${errors.name ? 'border-red-500 bg-red-50' : 'border-transparent focus:border-[#3A5A40] focus:bg-white shadow-sm'}`}
+                        />
+                        {errors.name && <p className="text-red-500 text-xs mt-1 ml-1">Il nome è obbligatorio</p>}
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Chi mangia?</label>
+                        <OwnerSelector 
+                            selectedOwners={recipeData.participants}
+                            onSelectionChange={handleParticipantsChange}
+                        />
+                    </div>
+
+                    <div className="flex gap-4">
+                        <div className="flex-1">
+                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Porzioni (Auto)</label>
+                            <div className="flex items-center bg-gray-50 rounded-2xl p-3 border-2 border-transparent shadow-sm focus-within:border-[#3A5A40] focus-within:bg-white transition-colors">
+                                <Users className="w-5 h-5 text-gray-400 mr-2" />
+                                <input type="number" value={recipeData.servings} onChange={e => setRecipeData({...recipeData, servings: parseInt(e.target.value) || 1})} className="w-full bg-transparent font-bold outline-none text-[#1A1A1A]" />
                             </div>
                         </div>
-
-                        {/* Sezione TEMPO */}
-                        <div>
-                            <label className="text-xs font-bold text-[#666666] uppercase mb-2 block">Tempo (min)</label>
-                            <div className="bg-white rounded-2xl p-2 border border-gray-100 flex items-center">
-                                <Clock className="w-4 h-4 text-gray-400 ml-2 mr-2" />
-                                <input 
-                                    type="number" 
-                                    min="1"
-                                    value={formData.prepTime}
-                                    onChange={(e) => setFormData({...formData, prepTime: Math.max(1, parseInt(e.target.value) || 0)})}
-                                    className="w-full font-bold text-[#1A1A1A] outline-none"
-                                />
+                        <div className="flex-1">
+                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Tempo (min)</label>
+                            <div className="flex items-center bg-gray-50 rounded-2xl p-3 border-2 border-transparent shadow-sm focus-within:border-[#3A5A40] focus-within:bg-white transition-colors">
+                                <Clock className="w-5 h-5 text-gray-400 mr-2" />
+                                <input type="number" value={recipeData.prepTime} onChange={e => setRecipeData({...recipeData, prepTime: parseInt(e.target.value) || 0})} className="w-full bg-transparent font-bold outline-none text-[#1A1A1A]" />
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
 
-                        {/* PORZIONI E CONDIVISIONE */}
-                        <div className="bg-[#F2F0E9] p-4 rounded-2xl space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-[#666666] uppercase mb-2 block">Condividi con:</label>
-                                <div className="flex gap-2">
-                                    {ROOMMATES.map(roommate => {
-                                        const isSelected = selectedParticipants.includes(roommate.id);
-                                        return (
-                                            <button
-                                                key={roommate.id}
-                                                onClick={() => toggleParticipant(roommate.id)}
-                                                disabled={roommate.id === 'mari'}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border-2 ${
-                                                    isSelected ? `border-transparent text-white ${roommate.color} shadow-md` : 'bg-white border-transparent text-gray-400 opacity-60'
-                                                }`}
+            {step === 2 && (
+                <div className="space-y-4 pt-4">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input type="text" placeholder="Cerca ingredienti..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-[#3A5A40]/20 font-medium text-[#1A1A1A] shadow-sm border border-gray-100" />
+                    </div>
+
+                    {searchTerm && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {filteredProducts.map(p => (
+                                <button key={p.id} onClick={() => handleAddIngredient(p)} className="px-3 py-2 bg-white border border-gray-200 shadow-sm rounded-lg text-sm font-medium hover:border-[#3A5A40] hover:text-[#3A5A40] transition-colors flex items-center gap-2">
+                                    <span>{p.icon}</span> {p.name} <Plus className="w-3 h-3" />
+                                </button>
+                            ))}
+                            <button 
+                                onClick={() => handleAddIngredient(searchTerm)}
+                                className="px-3 py-2 bg-[#3A5A40]/10 text-[#3A5A40] rounded-lg text-sm font-medium border border-transparent hover:bg-[#3A5A40]/20 transition-colors"
+                            >
+                                + Crea "{searchTerm}"
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="space-y-2 mt-4">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Ingredienti aggiunti</p>
+                        {recipeData.ingredients.length === 0 ? (
+                            <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">Nessun ingrediente ancora.</div>
+                        ) : (
+                            recipeData.ingredients.map((ing, i) => (
+                                <div key={i} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+                                    <span className="font-bold text-[#1A1A1A]">{ing.name}</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center bg-gray-50 rounded-lg px-2 py-1 border border-gray-100">
+                                            <input 
+                                                type="number" 
+                                                value={ing.qty} 
+                                                onChange={(e) => updateIngredientQty(i, 'qty', e.target.value)} 
+                                                className="w-12 bg-transparent text-right font-bold outline-none text-[#1A1A1A]" 
+                                            />
+                                            <select
+                                                value={ing.unit}
+                                                onChange={(e) => updateIngredientQty(i, 'unit', e.target.value)}
+                                                className="bg-transparent text-xs text-gray-500 ml-1 outline-none font-medium cursor-pointer"
                                             >
-                                                <span>{roommate.label}</span>
-                                                {isSelected && <Check className="w-3 h-3" />}
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-[#666666] uppercase mb-2 block">Porzioni totali:</label>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center bg-white rounded-xl p-1 border border-gray-200">
-                                        <button onClick={() => updateServings(servings - 1)} className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-lg"><Minus className="w-4 h-4" /></button>
-                                        <span className="w-12 text-center font-bold text-xl text-[#1A1A1A]">{servings}</span>
-                                        <button onClick={() => updateServings(servings + 1)} className="w-10 h-10 flex items-center justify-center text-[#3A5A40] hover:bg-[#3A5A40]/10 rounded-lg"><Plus className="w-4 h-4" /></button>
+                                                <option value="pz">pz</option>
+                                                <option value="g">g</option>
+                                                <option value="kg">kg</option>
+                                                <option value="ml">ml</option>
+                                                <option value="L">L</option>
+                                                <option value="conf">conf</option>
+                                                <option value="spicchio">spicchio</option>
+                                                <option value="cucchiaio">cucchiaio</option>
+                                            </select>
+                                        </div>
+                                        <button onClick={() => handleRemoveIngredient(i)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
-                                    <p className="text-[10px] text-gray-400 flex-1 leading-tight">Modificando le porzioni, le quantità degli ingredienti verranno ricalcolate.</p>
                                 </div>
-                            </div>
-                        </div>
+                            ))
+                        )}
                     </div>
-                )}
-               
-               {step === 2 && (
-                   <div className="space-y-3">
-                       <p className="text-sm text-gray-500 mb-2">Ingredienti per <span className="font-bold text-[#3A5A40]">{servings} persone</span></p>
-                       
-                       {formData.ingredients.map((ing, i) => (
-                           <div key={i} className="flex gap-2 items-start">
-                               {/* SELETTORE PRODOTTO IBRIDO */}
-                               <div className="flex-[2] relative">
-                                   {!ing.isCustom ? (
-                                       <select 
-                                           className="w-full p-3 bg-white rounded-xl border border-gray-100 text-sm font-medium outline-none appearance-none focus:border-[#3A5A40]"
-                                           value={ing.productId || ''}
-                                           onChange={(e) => handleIngredientChange(i, 'productId', e.target.value)}
-                                       >
-                                           <option value="" disabled>Seleziona...</option>
-                                           <option value="CUSTOM_ITEM" className="font-bold text-[#3A5A40]">+ Altro (non in dispensa)</option>
-                                           <hr />
-                                           {myInventory.map(p => (
-                                               <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
-                                           ))}
-                                       </select>
-                                   ) : (
-                                       <div className="flex items-center relative">
-                                           <input 
-                                                autoFocus
-                                                placeholder="Nome ingrediente"
-                                                value={ing.name}
-                                                onChange={(e) => handleIngredientChange(i, 'name', e.target.value)}
-                                                className="w-full p-3 pr-8 bg-white rounded-xl border border-[#3A5A40] text-sm font-medium outline-none"
-                                           />
-                                           <button 
-                                                onClick={() => handleResetToSelect(i)} 
-                                                className="absolute right-2 p-1 text-gray-400 hover:text-gray-600 bg-white rounded-full"
-                                                title="Scegli dalla dispensa"
-                                           >
-                                               <X className="w-4 h-4" />
-                                           </button>
-                                       </div>
-                                   )}
-                               </div>
+                </div>
+            )}
 
-                               <input 
-                                    type="number"
-                                    min="0.1"
-                                    step="0.1"
-                                    placeholder="Qtà" 
-                                    value={ing.qty}
-                                    onChange={(e) => handleIngredientChange(i, 'qty', e.target.value)}
-                                    className="w-16 p-3 bg-white rounded-xl border border-gray-100 text-sm outline-none text-center focus:border-[#3A5A40]" 
-                               />
-
-                               <select
-                                   className="w-16 p-3 bg-white rounded-xl border border-gray-100 text-xs font-bold text-gray-500 outline-none appearance-none text-center focus:border-[#3A5A40]"
-                                   value={ing.unit}
-                                   onChange={(e) => handleIngredientChange(i, 'unit', e.target.value)}
-                               >
-                                   {AVAILABLE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                               </select>
-                               
-                               <button 
-                                onClick={() => handleRemoveIngredient(i)} 
-                                className="p-3 text-red-400 hover:bg-red-50 rounded-xl"
-                                disabled={formData.ingredients.length === 1}
-                               >
-                                    <Trash2 className="w-4 h-4" />
-                               </button>
-                           </div>
-                       ))}
-
-                       <button 
-                        onClick={handleAddIngredient} 
-                        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium flex items-center justify-center gap-2 hover:border-[#3A5A40] hover:text-[#3A5A40] transition-colors mt-2"
-                       >
-                           <Plus className="w-4 h-4" /> Aggiungi ingrediente
-                       </button>
-                   </div>
-               )}
-
-               {step === 3 && (
-                    <div className="space-y-4">
-                        {formData.steps.map((st, i) => (
-                            <div key={i} className="flex gap-3">
-                                <div className="w-6 h-6 rounded-full bg-[#3A5A40] text-white flex items-center justify-center text-xs font-bold shrink-0 mt-2">
-                                    {i + 1}
-                                </div>
-                                <textarea 
-                                    placeholder={`Descrivi il passaggio ${i + 1}...`}
-                                    value={st}
-                                    onChange={(e) => handleStepChange(i, e.target.value)}
-                                    className="flex-1 p-3 bg-white rounded-xl border border-gray-100 text-sm outline-none focus:border-[#3A5A40] min-h-[80px]"
-                                />
-                                {formData.steps.length > 1 && (
-                                    <button onClick={() => handleRemoveStep(i)} className="self-start mt-2 text-red-400 hover:text-red-500">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                        <button onClick={handleAddStep} className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium flex items-center justify-center gap-2 hover:border-[#3A5A40] hover:text-[#3A5A40] transition-colors">
-                            <Plus className="w-4 h-4" /> Aggiungi passaggio
-                        </button>
+            {step === 3 && (
+                <div className="space-y-4 pt-4">
+                    <div className="p-4 bg-amber-50 text-amber-800 rounded-xl text-sm border border-amber-100 font-medium">
+                        La gestione dettagliata dei passaggi arriverà presto. Per ora salveremo solo ingredienti e tempi.
                     </div>
-               )}
-            </div>
-            
-            <div className="p-5 bg-white border-t border-gray-100 shrink-0 flex gap-3">
-                {step > 1 && (
-                    <button 
-                        onClick={() => setStep(step - 1)}
-                        className="px-6 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl"
-                    >
-                        Indietro
-                    </button>
-                )}
-                
-                {step < 3 ? (
-                    <button 
-                        onClick={() => setStep(step + 1)}
-                        className="flex-1 py-3 bg-[#3A5A40] text-white font-bold rounded-xl shadow-lg"
-                    >
-                        Avanti
-                    </button>
-                ) : (
-                    <button 
-                        onClick={handleSave}
-                        className="flex-1 py-3 bg-[#3A5A40] text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2"
-                    >
-                        <Check className="w-5 h-5" /> Salva Ricetta
-                    </button>
-                )}
-            </div>
-          </>
-        )}
+                </div>
+            )}
+        </div>
+
+        <div className="p-4 border-t border-gray-100 shrink-0 bg-white">
+            {step < 3 ? (
+                <button onClick={handleNext} className="w-full bg-[#3A5A40] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-[#3A5A40]/20">
+                    Continua <ChevronRight className="w-5 h-5 opacity-80" />
+                </button>
+            ) : (
+                <button onClick={handleSaveRecipe} className="w-full bg-[#1A1A1A] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-xl">
+                    Salva Ricetta <Check className="w-5 h-5" />
+                </button>
+            )}
+        </div>
       </motion.div>
     </div>
   );

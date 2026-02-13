@@ -26,15 +26,7 @@ export default function HomeHeader({ hasUnreadNotifications, onNotificationsRead
             <span className="text-white font-semibold text-sm">M</span>
           </Link>
 
-          {/* Search Bar */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cerca in Sorteat..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white rounded-full text-sm text-[#1A1A1A] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3A5A40]/20 card-shadow"
-            />
-          </div>
+  
 
           {/* Notifications */}
           <button 
