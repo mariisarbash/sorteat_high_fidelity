@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Camera, Check, RefreshCw, Box, User, Save, Calendar } from 'lucide-react';
-import OwnerSelector from './OwnerSelector'; // IMPORTANTE: Usa il componente reale per i sottogruppi!
+import { X, ChevronLeft, ChevronRight, Camera, Check, RefreshCw, Box, User, Save, Calendar, Plus, Minus } from 'lucide-react';
+import OwnerSelector from './OwnerSelector';
+import { useProducts } from '../../context/ProductsContext';
+import { toast } from 'sonner';
 
-// Mock prezzi per la simulazione scontrino
-const MOCK_PRICES = {
-  'Latte': 1.20, 'Pane': 1.50, 'Pasta': 0.90, 'Pomodori': 2.50,
-  'Banane': 1.80, 'Mozzarella': 1.10, 'Detersivo': 3.50, 'Uova': 2.20
-};
-
-// Categorie identiche a ManualProductEntry / CategoryPills
-const CATEGORIES = [
-  { id: 'frigo', label: 'Frigo', icon: '❄️', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { id: 'dispensa', label: 'Dispensa', icon: '🥫', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-  { id: 'freezer', label: 'Freezer', icon: '🧊', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' }
+// Categorie identiche a ProductDetailModal e ManualProductEntry
+const inventoryCategories = [
+  { id: 'frigo', name: 'Frigo', icon: '❄️' },
+  { id: 'dispensa', name: 'Dispensa', icon: '🗄️' },
+  { id: 'freezer', name: 'Freezer', icon: '🧊' },
 ];
+
+const units = ['pz', 'g', 'kg', 'ml', 'L', 'confezione'];
+const commonEmojis = ['🍅', '🍌', '🥬', '🧀', '🥓', '🍞', '🍝', '🫒', '🧴', '🥛', '🍎', '🥚', '🍗', '📦'];
 
 const ROOMMATES = [
   { id: 'mari', label: 'Mari', color: 'bg-pink-500' },
@@ -23,409 +22,383 @@ const ROOMMATES = [
 ];
 
 export default function CheckoutModal({ isOpen, onClose, checkedItems, onConfirm }) {
-  const [step, setStep] = useState(1); 
-  const [prices, setPrices] = useState({}); 
-  const [itemsToCheckout, setItemsToCheckout] = useState([]);
+  const { addProducts } = useProducts();
+  const [step, setStep] = useState('review'); // 'review' | 'scan'
   
-  // Stato per il modale di modifica singolo item
-  const [editingItem, setEditingItem] = useState(null); 
-  
+  const [finalItems, setFinalItems] = useState([]);
+  const [editingItem, setEditingItem] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [scanComplete, setScanComplete] = useState(false);
 
-  // Inizializza i dati quando si apre il checkout
   useEffect(() => {
     if (isOpen) {
-      // Prezzi vuoti
-      const initialPrices = {};
-      checkedItems.forEach(item => initialPrices[item.id] = '');
-      setPrices(initialPrices);
-
-      // Preparazione items con logica intelligente
-      const initialItems = checkedItems.map(item => ({
+      setFinalItems(checkedItems.map(item => ({
         ...item,
-        // Default expiry date: oggi + 7 giorni
-        finalExpiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        // Default owner: se c'è un solo owner lo preimposta, altrimenti array vuoto (che OwnerSelector gestisce come "Nessuno" o "Tutti" a seconda della logica)
-        finalOwners: item.owners || ['shared'], 
-        finalCategory: mapDeptToCategory(item.department),
-        finalQuantity: item.quantity
-      }));
-      setItemsToCheckout(initialItems);
+        finalCategory: 'frigo',
+        finalOwners: item.owners || ['mari'],
+        finalPrice: '',
+        finalExpiry: ''
+      })));
+      setStep('review');
     }
   }, [isOpen, checkedItems]);
 
-  const mapDeptToCategory = (dept) => {
-    if (dept === 'freschi' || dept === 'ortofrutta') return 'frigo';
-    if (dept === 'surgelati') return 'freezer';
-    return 'dispensa';
-  };
+  if (!isOpen) return null;
 
-  const handleEditClick = (item) => {
-    setEditingItem({ ...item }); 
-  };
-
-  const handleSaveEdit = (updatedItem) => {
-    setItemsToCheckout(prev => prev.map(item => 
-      item.id === updatedItem.id ? updatedItem : item
-    ));
-    setEditingItem(null);
-  };
-
-  const handlePriceChange = (id, value) => {
-    setPrices(prev => ({ ...prev, [id]: value }));
-  };
-
-  const handleScanReceipt = () => {
+  const handleSimulateScan = () => {
     setIsScanning(true);
     setTimeout(() => {
-      const detectedPrices = {};
-      checkedItems.forEach(item => {
-        const mockPrice = MOCK_PRICES[Object.keys(MOCK_PRICES).find(key => item.name.includes(key))] 
-                          || (Math.random() * 3 + 1).toFixed(2);
-        detectedPrices[item.id] = mockPrice;
-      });
-      setPrices(detectedPrices);
+      setFinalItems(prev => prev.map(item => ({
+        ...item,
+        finalPrice: (Math.random() * 4 + 0.5).toFixed(2)
+      })));
       setIsScanning(false);
-      setScanComplete(true);
+      setStep('review');
+      toast.success('Scontrino scansionato! Prezzi aggiornati.');
     }, 2000);
   };
 
-  const calculateTotal = () => {
-    return Object.values(prices).reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+  const handleSaveEdit = (updatedItem) => {
+    setFinalItems(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
+    setEditingItem(null);
   };
 
   const handleConfirmCheckout = () => {
-    const productsToConfirm = itemsToCheckout.map(item => ({
-      ...item,
-      quantity: parseFloat(item.finalQuantity),
-      owner: item.finalOwners.length === 1 ? item.finalOwners[0] : 'shared', // Semplificazione per il context attuale
-      owners: item.finalOwners, // Passiamo anche l'array completo se il context lo supporta
+    const productsToAdd = finalItems.map(item => ({
+      name: item.name,
+      icon: item.icon,
       category: item.finalCategory,
-      expiry_date: item.finalExpiryDate, // Passiamo la scadenza
-      price: parseFloat(prices[item.id]) || 0,
-      purchase_date: new Date().toISOString()
+      quantity: Number(item.quantity) || 1,
+      unit: item.unit,
+      owner: item.finalOwners.length > 1 ? 'shared' : item.finalOwners[0],
+      price: item.finalPrice,
+      expiry_date: item.finalExpiry
     }));
     
-    onConfirm(productsToConfirm);
-    resetAndClose();
-  };
-
-  const resetAndClose = () => {
+    addProducts(productsToAdd);
+    toast.success(`${productsToAdd.length} prodotti aggiunti all'inventario! 📦`);
+    onConfirm(finalItems.map(i => i.id)); 
     onClose();
-    setTimeout(() => {
-      setStep(1);
-      setPrices({});
-      setItemsToCheckout([]);
-      setScanComplete(false);
-      setIsScanning(false);
-      setEditingItem(null);
-    }, 300);
   };
-
-  if (!isOpen) return null;
 
   return (
-    <>
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
-        onClick={resetAndClose}
-      />
+    <AnimatePresence>
+      <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4 backdrop-blur-sm">
+        <motion.div 
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          className="bg-[#F9F9F9] w-full max-w-md sm:rounded-3xl rounded-t-3xl overflow-hidden flex flex-col max-h-[90vh]"
+        >
+          {/* HEADER */}
+          <div className="px-6 py-4 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+            <h2 className="text-xl font-bold text-[#1A1A1A]">Concludi Spesa</h2>
+            <button onClick={onClose} className="p-2 -mr-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
 
-      <motion.div
-        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 max-h-[90vh] flex flex-col max-w-md mx-auto shadow-2xl"
-      >
-        <div className="flex justify-center pt-3 pb-2 shrink-0">
-          <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
-        </div>
+          <div className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-6">
+            
+            {/* WIDGET SCANSIONE */}
+            <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-50 text-center">
+                <div className="w-16 h-16 bg-[#3A5A40]/10 text-[#3A5A40] rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Camera className="w-8 h-8" />
+                </div>
+                <h3 className="font-bold text-[#1A1A1A] mb-1">Hai lo scontrino?</h3>
+                <p className="text-sm text-gray-500 mb-4 px-2">
+                    Scansiona lo scontrino per aggiornare in automatico prezzi e quantità.
+                </p>
+                <button 
+                    onClick={handleSimulateScan}
+                    disabled={isScanning}
+                    className="w-full py-3 bg-[#F2F0E9] text-[#1A1A1A] font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[#E5E3DB] transition-colors"
+                >
+                    {isScanning ? (
+                        <><RefreshCw className="w-5 h-5 animate-spin" /> Analisi in corso...</>
+                    ) : (
+                        <><Camera className="w-5 h-5" /> Scansiona Ora</>
+                    )}
+                </button>
+            </div>
 
-        {/* Header Principale */}
-        <div className="flex items-center justify-between px-6 pb-4 shrink-0">
-          <div className="flex items-center gap-3">
-            {step > 1 && (
-              <button onClick={() => setStep(step - 1)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
-              </button>
-            )}
+            {/* LISTA PRODOTTI REVISIONATI */}
             <div>
-                <h2 className="text-xl font-bold text-[#1A1A1A]">
-                {step === 1 && 'Controlla Prodotti'}
-                {step === 2 && 'Prezzi'}
-                {step === 3 && 'Conferma'}
-                </h2>
-                <p className="text-xs text-gray-500 font-medium">Step {step} di 3</p>
+                <div className="flex items-center justify-between mb-3 px-1">
+                    <h3 className="font-bold text-[#1A1A1A]">Riepilogo ({finalItems.length})</h3>
+                    <span className="text-xs text-gray-500">Tocca per modificare</span>
+                </div>
+                <div className="space-y-3">
+                    {finalItems.map(item => {
+                        const categoryInfo = inventoryCategories.find(c => c.id === item.finalCategory) || inventoryCategories[0];
+                        
+                        return (
+                            <motion.div 
+                                key={item.id}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setEditingItem(item)}
+                                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 cursor-pointer hover:border-[#3A5A40]/30 transition-colors"
+                            >
+                                <div className="w-12 h-12 bg-[#F2F0E9] rounded-xl flex items-center justify-center text-2xl shrink-0">
+                                    {item.icon}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="font-bold text-[#1A1A1A] truncate">{item.name}</h4>
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                        <span className="text-xs font-medium text-[#1A1A1A] bg-gray-100 px-2 py-0.5 rounded-md">
+                                            {item.quantity} {item.unit}
+                                        </span>
+                                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                            {categoryInfo.icon} {categoryInfo.name}
+                                        </span>
+                                        {item.finalPrice && (
+                                            <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-md">
+                                                €{item.finalPrice}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="shrink-0 flex -space-x-2">
+                                    {item.finalOwners.map((ownerId, i) => {
+                                        const r = ROOMMATES.find(r => r.id === ownerId) || ROOMMATES[0];
+                                        return (
+                                            <div key={i} className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white ${r.color}`}>
+                                                {r.label[0]}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </div>
             </div>
           </div>
-          <button onClick={resetAndClose} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
 
-        {/* Step Progress Bar */}
-        <div className="flex gap-2 px-6 mb-6 shrink-0">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${s <= step ? 'bg-[#3A5A40]' : 'bg-gray-100'}`} />
-          ))}
-        </div>
-
-        {/* Scrollable Content */}
-        <div className="px-6 overflow-y-auto flex-1 pb-6 min-h-0">
-          <AnimatePresence mode="wait">
-            
-            {/* --- STEP 1: LISTA (Tocca per modificare) --- */}
-            {step === 1 && (
-              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-3">
-                <div className="bg-[#F2F0E9] p-4 rounded-2xl mb-4 border border-[#E5E5E5]">
-                    <p className="text-sm text-[#666666] leading-relaxed">
-                        Tocca un prodotto per modificare <strong>quantità</strong>, <strong>scadenza</strong> o <strong>proprietari</strong>.
-                    </p>
-                </div>
-
-                {itemsToCheckout.map((item) => {
-                    const categoryData = CATEGORIES.find(c => c.id === item.finalCategory);
-                    // Logica semplice per mostrare chi paga/possiede nella card riassuntiva
-                    const ownerLabel = item.finalOwners.length > 1 ? 'Condiviso' : 
-                                       item.finalOwners.length === 1 && item.finalOwners[0] !== 'shared' 
-                                       ? ROOMMATES.find(r => r.id === item.finalOwners[0])?.label 
-                                       : 'Tutti';
-
-                    return (
-                        <motion.div 
-                            key={item.id} 
-                            onClick={() => handleEditClick(item)}
-                            whileTap={{ scale: 0.98 }}
-                            className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center gap-3 relative overflow-hidden active:bg-gray-50 cursor-pointer"
-                        >
-                            <span className="text-2xl w-10 text-center shrink-0">{item.icon}</span>
-                            
-                            <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-[#1A1A1A] truncate">{item.name}</h3>
-                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                                    <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[#1A1A1A] font-bold">
-                                        {item.finalQuantity} {item.unit}
-                                    </span>
-                                    <span>•</span>
-                                    {categoryData && (
-                                        <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${categoryData.color.replace('border', 'bg').split(' ')[0]} bg-opacity-20`}>
-                                            {categoryData.icon} {categoryData.label}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-gray-400">{ownerLabel}</span>
-                                <ChevronRight className="w-5 h-5 text-gray-300" />
-                            </div>
-                        </motion.div>
-                    );
-                })}
-              </motion.div>
-            )}
-
-            {/* --- STEP 2: PREZZI --- */}
-            {step === 2 && (
-              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
-                <button
-                    onClick={handleScanReceipt}
-                    disabled={isScanning}
-                    className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold transition-all shadow-sm border ${
-                    isScanning || scanComplete ? 'bg-green-50 text-green-700 border-green-100' : 'bg-white text-[#3A5A40] border-[#3A5A40] hover:bg-[#3A5A40]/5'}`}
-                >
-                    {isScanning ? <><RefreshCw className="w-5 h-5 animate-spin" /> Analisi...</> : scanComplete ? <><Check className="w-5 h-5" /> Prezzi rilevati!</> : <><Camera className="w-5 h-5" /> Scansiona scontrino</>}
-                </button>
-
-                <div className="space-y-3">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Prezzi singoli</p>
-                    {checkedItems.map((item) => (
-                        <div key={item.id} className="flex items-center gap-3 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
-                            <span className="text-xl w-8 text-center">{item.icon}</span>
-                            <div className="flex-1 min-w-0">
-                                <p className="font-bold text-sm text-[#1A1A1A] truncate">{item.name}</p>
-                            </div>
-                            <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-2 w-24 border border-gray-200 focus-within:border-[#3A5A40]">
-                                <span className="text-gray-400 text-sm">€</span>
-                                <input 
-                                    type="number" placeholder="0.00" value={prices[item.id]} onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                                    className="bg-transparent w-full outline-none text-right font-bold text-[#1A1A1A] text-sm"
-                                />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="flex justify-between items-center pt-4 border-t border-dashed border-gray-200">
-                    <span className="text-gray-500 font-medium">Totale</span>
-                    <span className="text-xl font-bold text-[#3A5A40]">€ {calculateTotal().toFixed(2)}</span>
-                </div>
-              </motion.div>
-            )}
-
-            {/* --- STEP 3: CONFERMA --- */}
-            {step === 3 && (
-              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col items-center justify-center py-6 text-center">
-                <div className="w-24 h-24 bg-[#3A5A40]/10 rounded-full flex items-center justify-center mb-6">
-                    <div className="w-16 h-16 bg-[#3A5A40] rounded-full flex items-center justify-center shadow-lg shadow-[#3A5A40]/30">
-                        <Check className="w-8 h-8 text-white stroke-[3]" />
-                    </div>
-                </div>
-                <h3 className="text-2xl font-bold text-[#1A1A1A] mb-2">Spesa Conclusa!</h3>
-                <p className="text-gray-500 mb-8 max-w-[80%] mx-auto">Totale speso: <strong className="text-[#3A5A40]">€ {calculateTotal().toFixed(2)}</strong>. I prodotti sono stati spostati in dispensa.</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Footer Actions */}
-        <div className="px-6 py-6 border-t border-gray-100 shrink-0 bg-white">
-          {step < 3 ? (
-            <button onClick={() => setStep(step + 1)} className="w-full py-4 bg-[#3A5A40] text-white rounded-2xl font-bold text-lg shadow-xl shadow-[#3A5A40]/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
-              Continua <ChevronRight className="w-5 h-5 opacity-80" />
+          <div className="p-5 bg-white border-t border-gray-100 shrink-0">
+            <button 
+                onClick={handleConfirmCheckout}
+                className="w-full py-4 bg-[#3A5A40] text-white rounded-2xl font-bold text-lg shadow-xl shadow-[#3A5A40]/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+            >
+                <Check className="w-6 h-6" />
+                Aggiorna Inventario
             </button>
-          ) : (
-            <button onClick={handleConfirmCheckout} className="w-full py-4 bg-[#1A1A1A] text-white rounded-2xl font-bold text-lg shadow-xl active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
-              Finito <Check className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </motion.div>
+          </div>
+        </motion.div>
+      </div>
 
-      {/* --- NESTED MODAL: EDIT ITEM (Clone di ManualProductEntry) --- */}
       <AnimatePresence>
         {editingItem && (
             <CheckoutItemEditModal 
                 item={editingItem} 
-                onClose={() => setEditingItem(null)} 
-                onSave={handleSaveEdit} 
+                isOpen={!!editingItem}
+                onClose={() => setEditingItem(null)}
+                onSave={handleSaveEdit}
             />
         )}
       </AnimatePresence>
-    </>
+    </AnimatePresence>
   );
 }
 
-// --- SUB-COMPONENT: EDIT MODAL ---
-// Questo è una copia adattata di ManualProductEntry.jsx per garantire lo stesso look & feel
-function CheckoutItemEditModal({ item, onClose, onSave }) {
-    const [formData, setFormData] = useState({ ...item });
+// ==========================================
+// MODALE DI MODIFICA PRODOTTO (CLONE DI ProductDetailModal)
+// ==========================================
+function CheckoutItemEditModal({ item, isOpen, onClose, onSave }) {
+    const [formData, setFormData] = useState(null);
+    const [showIconPicker, setShowIconPicker] = useState(false);
 
-    // Funzione per aggiornare i proprietari usando la logica dell'OwnerSelector
-    const handleOwnersChange = (newOwners) => {
-        setFormData(prev => ({ ...prev, finalOwners: newOwners }));
-    };
+    useEffect(() => {
+        if (item) {
+            setFormData({
+                ...item,
+                name: item.name || '',
+                icon: item.icon || '📦',
+                quantity: item.quantity || 1,
+                unit: item.unit || 'pz',
+                finalCategory: item.finalCategory || 'frigo',
+                finalOwners: item.finalOwners || item.owners || ['mari'],
+                finalPrice: item.finalPrice || '',
+                finalExpiry: item.finalExpiry || ''
+            });
+        }
+    }, [item]);
+
+    if (!isOpen || !formData) return null;
 
     const handleSave = () => {
-        onSave(formData);
+        onSave({
+            ...item,
+            ...formData,
+            quantity: Number(formData.quantity) || 0
+        });
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center pointer-events-auto">
-            {/* Backdrop Scuro sopra il precedente */}
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
             <motion.div 
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                onClick={onClose}
-            />
-            
-            {/* Modal Card - Stile identico a ManualProductEntry */}
-            <motion.div
-                initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-                className="relative bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 pb-8 shadow-2xl z-10"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl flex flex-col max-h-[90vh] overflow-hidden shadow-2xl"
             >
-                {/* Header con Icona grande */}
-                <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-[#F2F0E9] rounded-2xl flex items-center justify-center text-4xl shadow-inner">
-                            {formData.icon}
-                        </div>
-                        <div>
-                            <h3 className="text-2xl font-bold text-[#1A1A1A]">{formData.name}</h3>
-                            <p className="text-sm text-gray-400 font-medium">Modifica dettaglio</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                {/* HEADER */}
+                <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 bg-white shrink-0">
+                    <div className="w-6" />
+                    <h2 className="text-lg font-bold text-[#1A1A1A]">Modifica Prodotto</h2>
+                    <button onClick={onClose} className="p-2 -mr-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
 
-                {/* Form Fields - Struttura copiata da ManualProductEntry */}
-                <div className="space-y-6">
+                {/* CORPO (Identico a ProductDetailModal > view='edit') */}
+                <div className="p-6 overflow-y-auto no-scrollbar flex-1 space-y-8">
                     
-                    {/* 1. Quantità (Input grande) */}
-                    <div>
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Quantità</label>
-                        <div className="flex gap-3">
-                            <div className="flex-1 bg-[#F9F9F9] rounded-2xl border border-gray-200 focus-within:border-[#3A5A40] focus-within:bg-white transition-all flex items-center px-4 py-4 shadow-sm">
-                                <input 
-                                    type="number" 
-                                    value={formData.finalQuantity}
-                                    onChange={(e) => setFormData({...formData, finalQuantity: e.target.value})}
-                                    className="w-full bg-transparent font-bold text-2xl text-[#1A1A1A] outline-none placeholder:text-gray-300"
+                    {/* NOME E ICONA */}
+                    <div className="space-y-3">
+                        <label className="text-sm font-bold text-[#1A1A1A] ml-1">Cosa stai modificando?</label>
+                        <div className="flex gap-3 relative">
+                            <button
+                                onClick={() => setShowIconPicker(!showIconPicker)}
+                                className="w-14 h-14 bg-[#F2F0E9] rounded-2xl flex items-center justify-center text-2xl active:scale-95 transition-transform shrink-0"
+                            >
+                                {formData.icon}
+                            </button>
+                            <div className="flex-1 bg-[#F2F0E9] rounded-2xl px-4 py-3 flex items-center">
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="Es. Pomodori..."
+                                    className="bg-transparent border-none outline-none w-full text-[#1A1A1A] font-bold text-lg placeholder:text-gray-400 placeholder:font-normal"
                                 />
                             </div>
-                            <div className="w-28 bg-[#F9F9F9] rounded-2xl flex items-center justify-center font-bold text-gray-600 border border-gray-200">
-                                {formData.unit}
+
+                            {/* ICON PICKER */}
+                            {showIconPicker && (
+                                <div className="absolute top-full left-0 mt-2 bg-white p-3 rounded-2xl shadow-xl border border-gray-100 grid grid-cols-5 gap-2 z-50">
+                                    {commonEmojis.map(emoji => (
+                                        <button 
+                                            key={emoji} 
+                                            onClick={() => { setFormData({...formData, icon: emoji}); setShowIconPicker(false); }}
+                                            className="text-2xl hover:scale-110 transition-transform p-1"
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* QUANTITÀ E UNITÀ */}
+                    <div className="space-y-3">
+                        <label className="text-sm font-bold text-[#1A1A1A] ml-1">Quantità</label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-[#F2F0E9] rounded-2xl p-2 flex items-center justify-between">
+                                <button 
+                                    onClick={() => setFormData(prev => ({...prev, quantity: Math.max(0, Number(prev.quantity) - 1)}))}
+                                    className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center active:scale-95 text-[#1A1A1A] shrink-0"
+                                >
+                                    <Minus className="w-5 h-5" />
+                                </button>
+                                <input 
+                                    type="number"
+                                    value={formData.quantity}
+                                    onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                                    className="w-full bg-transparent text-center font-bold text-lg text-[#1A1A1A] outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <button 
+                                    onClick={() => setFormData(prev => ({...prev, quantity: Number(prev.quantity) + 1}))}
+                                    className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center active:scale-95 text-[#1A1A1A] shrink-0"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                </button>
+                            </div>
+                            
+                            <div className="bg-[#F2F0E9] rounded-2xl px-4 py-2 flex items-center">
+                                <select 
+                                    value={formData.unit}
+                                    onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                                    className="bg-transparent border-none outline-none w-full font-bold text-[#1A1A1A] appearance-none"
+                                >
+                                    {units.map(u => (
+                                        <option key={u} value={u}>{u}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     </div>
 
-                    {/* 2. Scadenza (Input Data standard) */}
-                    <div>
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Scadenza</label>
-                        <div className="bg-[#F9F9F9] rounded-2xl border border-gray-200 focus-within:border-[#3A5A40] focus-within:bg-white transition-all flex items-center px-4 py-3 shadow-sm">
-                            <Calendar className="w-5 h-5 text-gray-400 mr-3" />
-                            <input 
-                                type="date"
-                                value={formData.finalExpiryDate}
-                                onChange={(e) => setFormData({...formData, finalExpiryDate: e.target.value})}
-                                className="w-full bg-transparent font-medium text-[#1A1A1A] outline-none text-base"
-                            />
+                    {/* CATEGORIA */}
+                    <div className="space-y-3">
+                        <label className="text-sm font-bold text-[#1A1A1A] ml-1">Dove lo conservi?</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {inventoryCategories.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setFormData({...formData, finalCategory: cat.id})}
+                                    className={`py-3 rounded-2xl font-bold flex flex-col items-center gap-1 transition-all ${
+                                        formData.finalCategory === cat.id 
+                                        ? 'bg-[#3A5A40] text-white shadow-md' 
+                                        : 'bg-[#F2F0E9] text-gray-500 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    <span className="text-xl">{cat.icon}</span>
+                                    <span className="text-xs">{cat.name}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    {/* 3. Categoria (Pillole con icone uguali a ManualProductEntry) */}
-                    <div>
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Dove lo metti?</label>
-                        <div className="flex gap-2">
-                            {CATEGORIES.map(cat => {
-                                const isSelected = formData.finalCategory === cat.id;
-                                return (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => setFormData({...formData, finalCategory: cat.id})}
-                                        className={`flex-1 py-3 px-2 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all border-2 ${
-                                            isSelected
-                                            ? `${cat.color} shadow-md scale-[1.02]`
-                                            : 'bg-white text-gray-400 border-gray-100 hover:border-gray-200 grayscale opacity-70 hover:grayscale-0 hover:opacity-100'
-                                        }`}
-                                    >
-                                        <span className="text-xl">{cat.icon}</span>
-                                        {cat.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* 4. Proprietari (OwnerSelector Component) */}
-                    <div>
+                    {/* PROPRIETARIO */}
+                    <div className="space-y-3">
+                        <label className="text-sm font-bold text-[#1A1A1A] ml-1">Di chi è?</label>
                         <OwnerSelector 
                             selectedOwners={formData.finalOwners}
-                            onSelectionChange={handleOwnersChange}
+                            onChange={(owners) => setFormData({...formData, finalOwners: owners})}
+                            onSelectionChange={(owners) => setFormData({...formData, finalOwners: owners})}
                         />
                     </div>
 
-                    {/* Save Button */}
+                    {/* DETTAGLI AGGIUNTIVI */}
+                    <div className="space-y-4 pt-2">
+                        <h3 className="text-sm font-bold text-[#1A1A1A] ml-1">Dettagli Aggiuntivi</h3>
+                        <div className="flex gap-3">
+                            <div className="flex-1 bg-[#F2F0E9] rounded-2xl px-4 py-3 flex items-center gap-3">
+                                <span className="text-gray-400 font-bold">€</span>
+                                <input 
+                                    type="number" 
+                                    value={formData.finalPrice}
+                                    onChange={(e) => setFormData({...formData, finalPrice: e.target.value})}
+                                    placeholder="Prezzo"
+                                    className="bg-transparent border-none outline-none w-full text-[#1A1A1A] font-medium placeholder:font-normal"
+                                />
+                            </div>
+                            <div className="flex-1 bg-[#F2F0E9] rounded-2xl px-4 py-3 flex items-center gap-3 relative">
+                                <Calendar className="w-5 h-5 text-gray-400 shrink-0" />
+                                <input 
+                                    type="date" 
+                                    value={formData.finalExpiry}
+                                    onChange={(e) => setFormData({...formData, finalExpiry: e.target.value})}
+                                    className="bg-transparent border-none outline-none w-full text-[#1A1A1A] font-medium text-sm"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* FOOTER BOTTONI */}
+                <div className="p-5 bg-white border-t border-gray-50 shrink-0">
                     <button 
-                        onClick={handleSave}
-                        className="w-full py-4 bg-[#3A5A40] text-white rounded-2xl font-bold text-lg shadow-xl shadow-[#3A5A40]/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 mt-6"
+                        onClick={handleSave} 
+                        className="w-full bg-[#3A5A40] text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#3A5A40]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-lg"
                     >
-                        Salva modifiche
-                        <Check className="w-5 h-5" />
+                        <Check className="w-6 h-6" /> Salva Modifiche
                     </button>
                 </div>
+
             </motion.div>
         </div>
     );

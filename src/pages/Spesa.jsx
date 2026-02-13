@@ -189,7 +189,7 @@ export default function Spesa() {
       <div className="sticky top-0 z-20 bg-[#F7F6F3]/95 backdrop-blur-sm px-5 pt-12 pb-2">
         <div className="flex items-center justify-between mb-4">
           <div>
-             <h1 className="text-3xl font-bold text-[#1A1A1A]">Spesa</h1>
+             <h1 className="text-2xl font-bold text-[#1A1A1A]">Spesa</h1>
              <p className="text-[#666666] text-sm mt-1">
                 {shoppingList.length === 0 ? 'Lista vuota' : `${shoppingList.length} prodotti in lista`}
              </p>
