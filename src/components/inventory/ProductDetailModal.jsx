@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, Edit2, MessageCircle, AlertCircle, Check, Calendar, Plus, Minus, ArrowLeft } from 'lucide-react';
+import { X, Trash2, Edit2, MessageCircle, AlertCircle, Check, Calendar, Plus, Minus, ArrowLeft, Clock } from 'lucide-react';
 import { useProducts } from '../../context/ProductsContext';
 import { useWaste } from '../../context/WasteContext';
 import { toast } from 'sonner';
@@ -22,6 +22,9 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
   const [view, setView] = useState('detail');
   const [editForm, setEditForm] = useState(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  
+  // Nuovo stato per la quantità richiesta
+  const [askQuantity, setAskQuantity] = useState('');
 
   useEffect(() => {
     if (product) {
@@ -35,6 +38,8 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
         price: product.price || '',
         expiryDate: product.expiry_date || ''
       });
+      // Resetta la quantità richiesta ogni volta che si apre un prodotto
+      setAskQuantity('');
       setView('detail');
     }
   }, [product]);
@@ -43,6 +48,18 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
 
   const currentCategory = inventoryCategories.find(c => c.id === product.category) || inventoryCategories[0];
   const isExpired = product.expiry_date && new Date(product.expiry_date) < new Date();
+
+  // Gestione tasti rapidi "Metà" e "Tutto"
+  const handleSetAskAmount = (type) => {
+    const total = parseFloat(product.quantity);
+    if (type === 'half') {
+        const val = total / 2;
+        // Se sono pezzi (pz), arrotonda per difetto, altrimenti tieni 1 decimale
+        setAskQuantity(product.unit === 'pz' ? Math.floor(val) : val.toFixed(1));
+    } else if (type === 'all') {
+        setAskQuantity(total);
+    }
+  };
 
   const handleSaveEdit = () => {
     if (!editForm.name.trim()) {
@@ -82,7 +99,24 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
         toast.success('Prodotto consumato! 😋');
         onClose();
     } else if (view === 'ask') {
-        toast.success(`Richiesta inviata a ${product.owner}! 💬`);
+        // Validazione
+        const reqQty = parseFloat(askQuantity);
+        const totalQty = parseFloat(product.quantity);
+
+        if (!askQuantity || reqQty <= 0 || reqQty > totalQty) {
+            toast.error("Inserisci una quantità valida");
+            return;
+        }
+
+        // Aggiorna il prodotto con lo stato "In attesa"
+        const updatedProduct = {
+            ...product,
+            hasPendingRequest: true,
+            pendingRequestDate: new Date().toISOString()
+        };
+        updateProduct(product.id, updatedProduct);
+
+        toast.success(`Hai richiesto ${product.name} a ${product.owner}! 💬`);
         setView('detail');
     }
   };
@@ -97,7 +131,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
           className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl flex flex-col max-h-[90vh] overflow-hidden"
         >
-          {/* HEADER (shrink-0 impedisce che venga schiacciato) */}
+          {/* HEADER */}
           <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 bg-white shrink-0">
             {view !== 'detail' ? (
                 <button onClick={() => setView('detail')} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -117,7 +151,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
             </button>
           </div>
 
-          {/* CORPO CENTRALE (flex-1 prende lo spazio rimanente, overflow-y-auto fa scrollare solo questa parte) */}
+          {/* CORPO CENTRALE */}
           <div className="p-6 overflow-y-auto no-scrollbar flex-1">
             
             {/* VISTA DETTAGLIO */}
@@ -285,6 +319,51 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                     </div>
                 </div>
             )}
+            
+            {/* VISTA ASK (CHIEDI) */}
+            {view === 'ask' && (
+                <div className="space-y-6 text-center">
+                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageCircle className="w-8 h-8 text-yellow-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-[#1A1A1A]">Chiedi prodotto</h3>
+                  <p className="text-[#666666]">
+                    Quanto {product.name} vuoi chiedere a {product.owner}?
+                  </p>
+
+                  {/* Input Quantità */}
+                  <div className="bg-[#F2F0E9] p-4 rounded-2xl border-2 border-yellow-100">
+                     <div className="flex items-center justify-center gap-2 mb-2">
+                        <input 
+                          type="number" 
+                          value={askQuantity}
+                          onChange={(e) => setAskQuantity(e.target.value)}
+                          placeholder="0"
+                          className="w-24 text-center text-3xl font-bold bg-transparent border-b-2 border-yellow-300 focus:outline-none focus:border-yellow-500 text-[#1A1A1A]"
+                          max={product.quantity}
+                        />
+                        <span className="text-gray-400 font-medium text-lg">{product.unit}</span>
+                     </div>
+                     <p className="text-xs text-gray-400">Disponibili: {product.quantity} {product.unit}</p>
+                  </div>
+
+                  {/* Tasti Rapidi */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => handleSetAskAmount('half')}
+                      className="py-2 px-4 rounded-xl bg-yellow-50 text-yellow-700 font-semibold text-sm hover:bg-yellow-100 transition-colors"
+                    >
+                      Metà ({product.unit === 'pz' ? Math.floor(product.quantity/2) : (product.quantity/2).toFixed(1)} {product.unit})
+                    </button>
+                    <button 
+                      onClick={() => handleSetAskAmount('all')}
+                      className="py-2 px-4 rounded-xl bg-yellow-50 text-yellow-700 font-semibold text-sm hover:bg-yellow-100 transition-colors"
+                    >
+                      Tutto ({product.quantity} {product.unit})
+                    </button>
+                  </div>
+                </div>
+            )}
 
             {/* VISTE DELETE / CONSUME */}
             {view === 'delete' && (
@@ -313,7 +392,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
 
           </div>
 
-          {/* FOOTER BOTTONI (Fisso dentro il contenitore bianco, nessuna absolute position) */}
+          {/* FOOTER BOTTONI */}
           <div className="p-5 bg-white border-t border-gray-50 shrink-0">
             {view === 'detail' && (
                 <div className="flex gap-3">
@@ -325,9 +404,18 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                     </button>
                     
                     {product.owner !== 'mari' && product.owner !== 'shared' ? (
-                        <button onClick={() => setView('ask')} className="flex-1 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg bg-yellow-400 text-yellow-900 shadow-lg shadow-yellow-400/20 active:scale-[0.98] transition-all">
-                            <MessageCircle className="w-5 h-5" /> Chiedi...
-                        </button>
+                        product.hasPendingRequest ? (
+                            <button 
+                                disabled
+                                className="flex-1 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                            >
+                                <Clock className="w-5 h-5" /> In attesa
+                            </button>
+                        ) : (
+                            <button onClick={() => setView('ask')} className="flex-1 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg bg-yellow-400 text-yellow-900 shadow-lg shadow-yellow-400/20 active:scale-[0.98] transition-all">
+                                <MessageCircle className="w-5 h-5" /> Chiedi...
+                            </button>
+                        )
                     ) : (
                         <button onClick={() => setView('consume')} className="flex-1 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg bg-[#3A5A40] text-white shadow-lg shadow-[#3A5A40]/20 active:scale-[0.98] transition-all">
                             Consuma...
@@ -348,8 +436,9 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
             {(view === 'ask' || view === 'consume' || view === 'delete') && (
                 <button 
                     onClick={handleConfirmAction} 
+                    disabled={view === 'ask' && (!askQuantity || parseFloat(askQuantity) <= 0 || parseFloat(askQuantity) > parseFloat(product.quantity))}
                     className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg transition-all active:scale-[0.98] shadow-lg ${
-                        view === 'ask' ? 'bg-yellow-400 text-yellow-900 shadow-yellow-400/20' : 
+                        view === 'ask' ? 'bg-yellow-400 text-yellow-900 shadow-yellow-400/20 disabled:opacity-50 disabled:cursor-not-allowed' : 
                         view === 'delete' ? 'bg-red-500 text-white shadow-red-500/20' :
                         'bg-[#3A5A40] text-white shadow-[#3A5A40]/30'
                     }`}
