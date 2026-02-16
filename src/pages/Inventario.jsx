@@ -12,23 +12,30 @@ export default function Inventario() {
   const [activeCategory, setActiveCategory] = useState('frigo');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   
-  // Usa il contesto globale dei prodotti
-  const { products, updateProduct, removeProduct, addProduct } = useProducts();
-
-  // Utente corrente (mock)
+  const [highlightedId, setHighlightedId] = useState(null);
+  
+  const { products } = useProducts();
   const currentUser = 'mari';
 
+  // FIX 1 & 2: Logica di Ricerca Globale
   const filteredProducts = useMemo(() => {
-    return products
-      .filter(p => p.category === activeCategory)
-      .filter(p => 
-        searchQuery === '' || 
+    let result = products;
+
+    // Se c'è una ricerca attiva, CERCA OVUNQUE (Ignora la categoria)
+    if (searchQuery.trim() !== '') {
+      result = result.filter(p => 
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
+    } else {
+      // Se NON c'è ricerca, filtra per la tab attiva (Frigo/Dispensa/ecc)
+      result = result.filter(p => p.category === activeCategory);
+    }
+
+    return result;
   }, [products, activeCategory, searchQuery]);
 
+  // Calcolo prodotti in scadenza (sui risultati filtrati)
   const expiringProducts = useMemo(() => {
     return filteredProducts
       .filter(p => {
@@ -39,6 +46,7 @@ export default function Inventario() {
       .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date));
   }, [filteredProducts]);
 
+  // Calcolo prodotti regolari (escludendo quelli in scadenza per non duplicarli)
   const regularProducts = useMemo(() => {
     const expiringIds = new Set(expiringProducts.map(p => p.id));
     return filteredProducts.filter(p => !expiringIds.has(p.id));
@@ -49,36 +57,14 @@ export default function Inventario() {
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseModal = (modifiedProductId = null) => {
     setIsModalOpen(false);
     setSelectedProduct(null);
-  };
 
-  const handleAddNotification = (notification) => {
-    setNotifications(prev => [notification, ...prev]);
-    console.log('Nuova notifica aggiunta:', notification);
-  };
-
-  // Callback per aggiornare la quantità di un prodotto
-  const handleUpdateProduct = (productId, newQuantity) => {
-    updateProduct(productId, newQuantity);
-    // Aggiorna anche il prodotto selezionato se è lo stesso
-    if (selectedProduct && selectedProduct.id === productId) {
-      setSelectedProduct(prev => ({ ...prev, quantity: newQuantity }));
+    if (modifiedProductId) {
+      setHighlightedId(modifiedProductId);
+      setTimeout(() => setHighlightedId(null), 2000);
     }
-  };
-
-  // Callback per rimuovere un prodotto dall'inventario
-  const handleRemoveProduct = (productId) => {
-    removeProduct(productId);
-    // Chiudi il modale se il prodotto rimosso è quello selezionato
-    if (selectedProduct && selectedProduct.id === productId) {
-      handleCloseModal();
-    }
-  };
-
-  const handleAddProduct = (product) => {
-    addProduct(product);
   };
 
   return (
@@ -90,20 +76,28 @@ export default function Inventario() {
         onSearchChange={setSearchQuery}
       />
       
-      <CategoryPills 
-        activeCategory={activeCategory}
-        onCategoryChange={setActiveCategory}
-      />
+      {/* Nascondi le CategoryPills se l'utente sta cercando, per non confonderlo */}
+      <div className={`transition-all duration-300 ${searchQuery ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'}`}>
+        <CategoryPills 
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
+        />
+      </div>
       
       <ExpiringSection 
         products={expiringProducts} 
         onProductClick={handleProductClick}
+        highlightedProductId={highlightedId}
       />
       
       <ProductsGrid 
         products={regularProducts}
-        title={expiringProducts.length > 0 ? 'Tutti i prodotti' : null}
+        // Se c'è una ricerca, il titolo cambia per far capire che stiamo guardando tutto
+        title={searchQuery ? (regularProducts.length > 0 ? 'Risultati della ricerca' : null) : (expiringProducts.length > 0 ? 'Tutti i prodotti' : null)}
         onProductClick={handleProductClick}
+        highlightedProductId={highlightedId}
+        // FIX 3: Nascondi messaggio "Vuoto" se abbiamo trovato roba in scadenza
+        hideEmptyState={expiringProducts.length > 0} 
       />
 
       <ProductDetailModal
@@ -111,10 +105,6 @@ export default function Inventario() {
         onClose={handleCloseModal}
         product={selectedProduct}
         currentUser={currentUser}
-        onAddNotification={handleAddNotification}
-        onUpdateProduct={handleUpdateProduct}
-        onRemoveProduct={handleRemoveProduct}
-        onAddProduct={handleAddProduct}
       />
     </div>
   );

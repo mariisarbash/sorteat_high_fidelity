@@ -29,13 +29,24 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
 
   useEffect(() => {
     if (product) {
+      // FIX: Caricamento corretto degli owners.
+      // Se il prodotto ha la nuova prop 'owners', usa quella.
+      // Altrimenti fallback sulla vecchia logica 'owner' (per compatibilità o dati vecchi)
+      let initialOwners = [];
+      if (product.owners && Array.isArray(product.owners)) {
+          initialOwners = product.owners;
+      } else {
+          // Fallback legacy
+          initialOwners = product.owner === 'shared' ? ['mari', 'gio', 'pile'] : [product.owner || 'mari'];
+      }
+
       setEditForm({
         name: product.name || '',
         icon: product.icon || '📦',
         quantity: product.quantity || 1,
         unit: product.unit || 'pz',
         category: product.category || 'frigo',
-        owners: product.owner === 'shared' ? ['mari', 'gio', 'pile'] : [product.owner || 'mari'],
+        owners: initialOwners, // Usa l'array calcolato
         price: product.price || '',
         expiryDate: product.expiry_date || ''
       });
@@ -50,6 +61,15 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
 
   const currentCategory = inventoryCategories.find(c => c.id === product.category) || inventoryCategories[0];
   const isExpired = product.expiry_date && new Date(product.expiry_date) < new Date();
+
+  // Helper per visualizzare i proprietari nel dettaglio
+  const getOwnerLabel = () => {
+      const owners = product.owners || (product.owner === 'shared' ? ['mari', 'gio', 'pile'] : [product.owner]);
+      if (owners.length === 3) return 'Shared'; // O "Tutti"
+      if (owners.length === 0) return 'Nessuno';
+      // Capitalizza i nomi
+      return owners.map(o => o.charAt(0).toUpperCase() + o.slice(1)).join(' & ');
+  };
 
   // --- VALIDAZIONE ---
   const isQuantityValid = () => {
@@ -76,7 +96,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
     setIsAiLoading(true);
     setTimeout(() => {
         setIsAiLoading(false);
-        // Logica finta: l'AI rileva che hai consumato metà
         const total = parseFloat(product.quantity);
         const aiGuess = (total * 0.5).toFixed(product.unit === 'pz' ? 0 : 1);
         setActionQuantity(aiGuess);
@@ -84,97 +103,93 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
     }, 1500);
   };
 
-  // --- SALVATAGGIO MODIFICHE (FIX 1) ---
+  // --- SALVATAGGIO MODIFICHE ---
   const handleSaveEdit = () => {
     if (!editForm.name.trim()) {
         toast.error('Inserisci un nome per il prodotto');
         return;
     }
+
+    // CONTROLLO SICUREZZA: L'utente non può rimuovere se stesso ('mari')
+    if (!editForm.owners.includes('mari')) {
+        toast.error("Non puoi rimuoverti dalla proprietà del prodotto! 🚫");
+        return;
+    }
     
-    // Aggiorna usando l'ID corretto e passando solo i campi necessari
+    // Aggiorna usando l'ID corretto e passando l'ARRAY owners
     updateProduct(product.id, {
         name: editForm.name,
         icon: editForm.icon,
         quantity: Number(editForm.quantity),
         unit: editForm.unit,
         category: editForm.category,
-        owner: editForm.owners.length > 1 ? 'shared' : editForm.owners[0],
+        owners: editForm.owners, // Salva l'array così com'è (es. ['mari', 'gio'])
         price: editForm.price,
         expiry_date: editForm.expiryDate
     });
     
     toast.success('Prodotto aggiornato');
-    setView('detail');
+    onClose(product.id);
   };
 
-  // --- CONFERMA AZIONI (FIX 2 & 3) ---
+  // --- CONFERMA AZIONI ---
   const handleConfirmAction = () => {
     // 1. ELIMINA
     if (view === 'delete') {
-        if (isExpired) {
-            registerWaste(product, product.quantity, product.unit, 'scaduto');
-            toast.success('Prodotto buttato (Spreco registrato)');
-        } else {
-            toast.success('Prodotto rimosso');
-        }
+        const reason = isExpired ? 'scaduto' : 'buttato';
+        registerWaste(product, product.quantity, product.unit, reason);
+        toast.success('Prodotto eliminato (Spreco registrato 🗑️)');
         removeProduct(product.id);
-        onClose();
+        onClose(); 
     } 
-    // 2. CONSUMA (Nuova logica parziale)
+    // 2. CONSUMA
     else if (view === 'consume') {
         if (!isQuantityValid()) return;
-        
         const consumed = parseFloat(actionQuantity);
         const total = parseFloat(product.quantity);
 
         if (consumed >= total) {
-            // Ha finito tutto -> Rimuovi
             removeProduct(product.id);
             toast.success('Ottimo! Hai finito il prodotto 😋');
-            onClose();
+            onClose(); 
         } else {
-            // Ha consumato solo una parte -> Aggiorna rimanenza
-            const remaining = total - consumed;
-            // Arrotonda per evitare decimali strani
-            const cleanRemaining = parseFloat(remaining.toFixed(2));
-            
-            updateProduct(product.id, { quantity: cleanRemaining });
-            toast.success(`Aggiornato! Rimangono ${cleanRemaining} ${product.unit}`);
-            setView('detail');
+            const remaining = parseFloat((total - consumed).toFixed(2));
+            updateProduct(product.id, { quantity: remaining });
+            toast.success(`Aggiornato! Rimangono ${remaining} ${product.unit}`);
+            onClose(product.id);
         }
     } 
-    // 3. CHIEDI (Fix persistenza e notifica)
+    // 3. CHIEDI
     else if (view === 'ask') {
         if (!isQuantityValid()) {
             toast.error("Inserisci una quantità valida");
             return;
         }
-
-        // Salva persistente nel DB globale
         updateProduct(product.id, {
             hasPendingRequest: true,
             pendingRequestDate: new Date().toISOString()
         });
+        
+        // Calcola a chi stai chiedendo (escludendo te stesso)
+        const targetOwner = product.owners 
+            ? product.owners.filter(o => o !== 'mari').join(' & ') 
+            : product.owner;
 
-        // Crea e salva notifica
         const newNotification = {
             id: Date.now(),
             title: `Hai chiesto ${product.name}`,
-            message: `Richiesta inviata a ${product.owner} (${actionQuantity} ${product.unit})`,
+            message: `Richiesta inviata a ${targetOwner} (${actionQuantity} ${product.unit})`,
             type: 'activity',
             icon: product.icon || '💬',
             iconBg: 'bg-yellow-100'
         };
         
-        // Salva in localStorage per persistenza notifiche
         const existingNotifications = JSON.parse(localStorage.getItem('sorteat_notifications') || '[]');
         localStorage.setItem('sorteat_notifications', JSON.stringify([newNotification, ...existingNotifications]));
-        
-        // Aggiorna UI notifiche se aperta
         window.dispatchEvent(new CustomEvent('add-notification', { detail: newNotification }));
 
-        toast.success(`Richiesta inviata a ${product.owner}!`);
-        setView('detail');
+        toast.success(`Richiesta inviata a ${targetOwner}!`);
+        onClose(product.id);
     }
   };
 
@@ -203,7 +218,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                  view === 'ask' ? 'Chiedi in Prestito' : 
                  view === 'delete' ? 'Elimina' : 'Consuma'}
             </h2>
-            <button onClick={onClose} className="p-2 -mr-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors">
+            <button onClick={() => onClose()} className="p-2 -mr-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors">
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -222,6 +237,10 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                             <h3 className="text-2xl font-bold text-[#1A1A1A]">{product.name}</h3>
                             <p className="text-[#666666] flex items-center gap-2 mt-1">
                                 {currentCategory.icon} {currentCategory.name}
+                            </p>
+                            {/* Visualizza i proprietari reali */}
+                            <p className="text-xs text-blue-600 font-medium mt-1 bg-blue-50 inline-block px-2 py-1 rounded-lg">
+                                Di: {getOwnerLabel()}
                             </p>
                         </div>
                     </div>
@@ -244,7 +263,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
             {/* VISTA MODIFICA */}
             {view === 'edit' && (
                 <div className="space-y-8">
-                    {/* NOME E ICONA */}
+                    {/* ... (Codice UI identico a prima per Nome/Icona/Quantità/Categoria) ... */}
                     <div className="space-y-3">
                         <label className="text-sm font-bold text-[#1A1A1A] ml-1">Cosa stai modificando?</label>
                         <div className="flex gap-3 relative">
@@ -263,7 +282,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                                     className="bg-transparent border-none outline-none w-full text-[#1A1A1A] font-bold text-lg placeholder:text-gray-400 placeholder:font-normal"
                                 />
                             </div>
-
                             {showIconPicker && (
                                 <div className="absolute top-full left-0 mt-2 bg-white p-3 rounded-2xl shadow-xl border border-gray-100 grid grid-cols-5 gap-2 z-50">
                                     {commonEmojis.map(emoji => (
@@ -280,7 +298,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                         </div>
                     </div>
 
-                    {/* QUANTITÀ E UNITÀ */}
                     <div className="space-y-3">
                         <label className="text-sm font-bold text-[#1A1A1A] ml-1">Quantità</label>
                         <div className="grid grid-cols-2 gap-4">
@@ -304,7 +321,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                                     <Plus className="w-5 h-5" />
                                 </button>
                             </div>
-                            
                             <div className="bg-[#F2F0E9] rounded-2xl px-4 py-2 flex items-center">
                                 <select 
                                     value={editForm.unit}
@@ -319,7 +335,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                         </div>
                     </div>
 
-                    {/* CATEGORIA */}
                     <div className="space-y-3">
                         <label className="text-sm font-bold text-[#1A1A1A] ml-1">Dove lo conservi?</label>
                         <div className="grid grid-cols-3 gap-2">
@@ -340,16 +355,16 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                         </div>
                     </div>
 
-                    {/* PROPRIETARIO */}
+                    {/* PROPRIETARIO - Logica aggiornata */}
                     <div className="space-y-3">
                         <label className="text-sm font-bold text-[#1A1A1A] ml-1">Di chi è?</label>
                         <OwnerSelector 
                             selectedOwners={editForm.owners}
                             onChange={(owners) => setEditForm({...editForm, owners})}
                         />
+                        <p className="text-[10px] text-gray-400 ml-1">Nota: non puoi rimuovere te stesso.</p>
                     </div>
 
-                    {/* DETTAGLI AGGIUNTIVI */}
                     <div className="space-y-4 pt-2">
                         <h3 className="text-sm font-bold text-[#1A1A1A] ml-1">Dettagli Aggiuntivi</h3>
                         <div className="flex gap-3">
@@ -377,7 +392,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                 </div>
             )}
             
-            {/* VISTA ASK (CHIEDI) e CONSUME (CONSUMA) UNIFICATE */}
+            {/* VISTA ASK / CONSUME / DELETE (Codice identico a prima, ometto per brevità ma è incluso nel file completo) */}
             {(view === 'ask' || view === 'consume') && (
                 <div className="space-y-6 text-center">
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${view === 'ask' ? 'bg-yellow-100' : 'bg-green-100'}`}>
@@ -389,12 +404,11 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                   </h3>
                   <p className="text-[#666666]">
                     {view === 'ask' 
-                        ? `Quanto ${product.name} vuoi chiedere a ${product.owner}?`
+                        ? `Quanto ${product.name} vuoi chiedere a ${getOwnerLabel()}?`
                         : `Aggiorna la quantità di ${product.name} consumata.`
                     }
                   </p>
 
-                  {/* Input Quantità */}
                   <div className={`bg-[#F2F0E9] p-4 rounded-2xl border-2 transition-colors ${!isQuantityValid() && actionQuantity ? 'border-red-300 bg-red-50' : view === 'ask' ? 'border-yellow-100' : 'border-green-100'}`}>
                      <div className="flex items-center justify-center gap-2 mb-2">
                         <input 
@@ -410,7 +424,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                      <p className="text-xs text-gray-400">Disponibili: {product.quantity} {product.unit}</p>
                   </div>
 
-                  {/* Tasti Rapidi */}
                   <div className="grid grid-cols-2 gap-3">
                     <button 
                       onClick={() => handleSetAmount('half')}
@@ -426,7 +439,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                     </button>
                   </div>
 
-                  {/* TASTO AI (Solo Consuma) */}
                   {view === 'consume' && (
                       <button 
                         onClick={handleAiUpdate}
@@ -447,7 +459,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                 </div>
             )}
 
-            {/* VISTA DELETE */}
             {view === 'delete' && (
                 <div className="text-center py-6">
                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
@@ -459,7 +470,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
             )}
           </div>
 
-          {/* FOOTER BOTTONI */}
+          {/* FOOTER BOTTONI (Identico a prima) */}
           <div className="p-5 bg-white border-t border-gray-50 shrink-0">
             {view === 'detail' && (
                 <div className="flex gap-3">
@@ -470,13 +481,10 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                         <Edit2 className="w-6 h-6" />
                     </button>
                     
-                    {product.owner !== 'mari' && product.owner !== 'shared' ? (
-                        // USA LO STATO PERSISTENTE hasPendingRequest
+                    {/* Logica Chiedi: se NON sono proprietario */}
+                    {!(product.owners && product.owners.includes('mari')) ? (
                         product.hasPendingRequest ? (
-                            <button 
-                                disabled
-                                className="flex-1 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg bg-gray-100 text-gray-500 cursor-not-allowed opacity-60"
-                            >
+                            <button disabled className="flex-1 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg bg-gray-100 text-gray-500 cursor-not-allowed opacity-60">
                                 <Clock className="w-5 h-5" /> In attesa
                             </button>
                         ) : (

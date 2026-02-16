@@ -1,8 +1,11 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
+// Importiamo AvatarStack per coerenza con il resto dell'app
+import AvatarStack from '../spesa/AvatarStack';
 
-export default function ExpiringSection({ products, onProductClick }) {
+export default function ExpiringSection({ products, onProductClick, highlightedProductId }) {
+  if (products.length === 0) return null;
+
   const getDaysLeft = (expiryDate) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -24,55 +27,70 @@ export default function ExpiringSection({ products, onProductClick }) {
     return 'bg-yellow-100 text-yellow-700';
   };
 
-  const getOwnerBadge = (owner) => {
-    if (owner === 'mari') return null;
-    if (owner === 'gio') return { label: 'G', color: 'bg-blue-500' };
-    if (owner === 'pile') return { label: 'P', color: 'bg-purple-500' };
-    if (owner === 'shared') return { label: '🏠', color: 'bg-[#A3B18A]' };
-    return null;
-  };
-
-  if (products.length === 0) return null;
-
   return (
-    <div className="px-5 mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle className="w-4 h-4 text-[#D4A373]" />
-        <h3 className="font-semibold text-[#1A1A1A]">Da consumare subito</h3>
-      </div>
+    <div className="mb-6">
+      <h3 className="px-5 font-semibold text-[#1A1A1A] mb-3">Da consumare subito ⚠️</h3>
       
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
-        {products.map((product, index) => {
-          const daysLeft = getDaysLeft(product.expiry_date);
-          const ownerBadge = getOwnerBadge(product.owner);
-          
-          return (
-            <motion.div
-              key={product.id}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: index * 0.05 }}
-              className="flex-shrink-0 w-24 cursor-pointer"
-              onClick={() => onProductClick?.(product)}
-            >
-              <div className={`bg-white rounded-2xl p-3 text-center relative card-shadow active:scale-95 transition-transform ${daysLeft <= 0 ? 'opacity-75' : ''}`}>
-                {ownerBadge && (
-                  <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full ${ownerBadge.color} text-white text-[10px] font-bold flex items-center justify-center border-2 border-white z-10`}>
-                    {ownerBadge.label}
-                  </div>
+      {/* Scroll container con padding verticale per evitare tagli */}
+      <div className="overflow-x-auto no-scrollbar pb-2 pt-2 px-5 -mx-5 md:mx-0">
+        <div className="flex gap-3 px-5 md:px-0 w-max">
+          {products.map((product, index) => {
+            const daysLeft = getDaysLeft(product.expiry_date);
+            
+            // Normalizza gli owners
+            const productOwners = product.owners || (product.owner ? [product.owner] : ['shared']);
+            
+            // Determina se questo prodotto deve essere evidenziato
+            const isHighlighted = product.id === highlightedProductId;
+            
+            return (
+              <motion.div
+                key={product.id}
+                initial={{ scale: 0.9, opacity: 0 }}
+                // Animazione di Highlight: pulsazione + opacità fissa a 1
+                animate={
+                    isHighlighted 
+                    ? { scale: [1, 1.05, 1], opacity: 1, transition: { duration: 0.5, repeat: 1 } } 
+                    : { scale: 1, opacity: 1 }
+                }
+                transition={{ delay: index * 0.05 }}
+                // Padding per ospitare AvatarStack e Glow
+                className="flex-shrink-0 w-28 cursor-pointer relative pt-2 pr-2"
+                onClick={() => onProductClick?.(product)}
+              >
+                {/* Effetto Glow Dorato (solo se evidenziato) */}
+                {isHighlighted && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 1, 0] }}
+                        transition={{ duration: 1.5 }}
+                        className="absolute top-2 right-2 bottom-0 left-0 bg-yellow-400/50 rounded-[18px] blur-sm z-0"
+                    />
                 )}
-                
-                <span className={`text-3xl ${daysLeft <= 0 ? 'grayscale-[50%]' : ''}`}>
-                  {product.icon || '📦'}
-                </span>
-                <p className="text-xs font-medium text-[#1A1A1A] mt-2 truncate">{product.name}</p>
-                <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${getExpiryColor(daysLeft)}`}>
-                  {getDaysText(daysLeft)}
-                </span>
-              </div>
-            </motion.div>
-          );
-        })}
+
+                <div className={`bg-white rounded-2xl p-3 text-center relative card-shadow active:scale-95 transition-transform z-10 ${daysLeft <= 0 ? 'opacity-75' : ''} ${isHighlighted ? 'ring-2 ring-yellow-400' : ''}`}>
+                  
+                  {/* AvatarStack in alto a destra */}
+                  <div className="absolute -top-2 -right-2 z-10">
+                      <AvatarStack owners={productOwners} />
+                  </div>
+                  
+                  <span className={`text-4xl block mb-2 ${daysLeft <= 0 ? 'grayscale-[50%]' : ''}`}>
+                    {product.icon || '📦'}
+                  </span>
+                  
+                  <p className="text-xs font-bold text-[#1A1A1A] truncate w-full">
+                    {product.name}
+                  </p>
+                  
+                  <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1.5 ${getExpiryColor(daysLeft)}`}>
+                    {getDaysText(daysLeft)}
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

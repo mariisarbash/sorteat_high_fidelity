@@ -1,7 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import AvatarStack from '../spesa/AvatarStack';
 
-export default function ProductCard({ product, index, onClick }) {
+// Definisco le categorie qui per mappare l'icona
+const CATEGORIES_MAP = {
+  frigo: { name: 'Frigo', icon: '❄️' },
+  dispensa: { name: 'Dispensa', icon: '🗄️' },
+  freezer: { name: 'Freezer', icon: '🧊' },
+};
+
+export default function ProductCard({ product, index, onClick, isHighlighted, showCategory }) {
   const getDaysUntilExpiry = () => {
     if (!product.expiry_date) return null;
     const today = new Date();
@@ -22,32 +30,47 @@ export default function ProductCard({ product, index, onClick }) {
     return '';
   };
 
-  const getOwnerBadge = () => {
-    if (product.owner === 'mari') return null;
-    if (product.owner === 'gio') return { label: 'G', color: 'bg-blue-500' };
-    if (product.owner === 'pile') return { label: 'P', color: 'bg-purple-500' };
-    if (product.owner === 'shared') return { label: '🏠', color: 'bg-[#A3B18A]' };
-    return null;
-  };
-
-  const ownerBadge = getOwnerBadge();
+  const productOwners = product.owners || (product.owner ? [product.owner] : ['shared']);
+  
+  // Recupera info categoria
+  const categoryInfo = CATEGORIES_MAP[product.category] || { name: '', icon: '' };
 
   return (
     <motion.div
       initial={{ scale: 0.9, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
+      animate={
+        isHighlighted 
+        ? { scale: [1, 1.05, 1], opacity: 1, transition: { duration: 0.5, repeat: 1 } } 
+        : { scale: 1, opacity: 1 }
+      }
       transition={{ delay: index * 0.03 }}
-      className="active:scale-95 transition-transform cursor-pointer"
+      className="active:scale-95 transition-transform cursor-pointer relative pt-2 pr-2"
       onClick={() => onClick?.(product)}
     >
-      <div className={`bg-[#F2F0E9] rounded-2xl p-3 text-center relative ${getExpiryStyle()}`}>
-        {ownerBadge && (
-          <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full ${ownerBadge.color} text-white text-[10px] font-bold flex items-center justify-center border-2 border-white z-10`}>
-            {ownerBadge.label}
+      {isHighlighted && (
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 1.5 }}
+            className="absolute top-2 right-2 bottom-0 left-0 bg-yellow-400/50 rounded-[18px] blur-sm z-0"
+        />
+      )}
+      
+      <div className={`bg-[#F2F0E9] rounded-2xl p-3 text-center relative z-10 ${getExpiryStyle()} ${isHighlighted ? 'ring-2 ring-yellow-400' : ''}`}>
+        
+        {/* FIX LOCATION: Badge categoria in alto a sinistra (solo in ricerca) */}
+        {showCategory && (
+          <div className="absolute -top-2 -left-1 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-500 border border-gray-100 shadow-sm z-20 flex items-center gap-1">
+             <span>{categoryInfo.icon}</span> {categoryInfo.name}
           </div>
         )}
+
+        {/* AvatarStack in alto a destra */}
+        <div className="absolute -top-2 -right-2 z-10">
+            <AvatarStack owners={productOwners} />
+        </div>
         
-        <div className="text-3xl mb-2">{product.icon || '📦'}</div>
+        <div className="text-3xl mb-2 mt-1">{product.icon || '📦'}</div>
         
         <p className="text-xs font-semibold text-[#1A1A1A] truncate">{product.name}</p>
         

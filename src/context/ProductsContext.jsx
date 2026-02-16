@@ -3,20 +3,20 @@ import { getDaysUntilExpiry } from '../utils/products';
 
 export { getDaysUntilExpiry };
 
-// --- DATI INIZIALI ---
+// --- DATI INIZIALI AGGIORNATI CON ARRAY OWNERS ---
 const initialProducts = [
-  { id: 1, name: 'Pollo', icon: '🍗', category: 'frigo', quantity: 500, unit: 'g', expiry_date: '2026-02-09', owner: 'mari' },
-  { id: 2, name: 'Yogurt', icon: '🥛', category: 'frigo', quantity: 2, unit: 'vasetti', expiry_date: '2026-02-10', owner: 'shared' },
-  { id: 3, name: 'Spinaci', icon: '🥬', category: 'frigo', quantity: 200, unit: 'g', expiry_date: '2026-02-11', owner: 'gio' },
-  { id: 4, name: 'Latte', icon: '🥛', category: 'frigo', quantity: 1, unit: 'L', expiry_date: '2026-02-15', owner: 'shared' },
-  { id: 5, name: 'Uova', icon: '🥚', category: 'frigo', quantity: 6, unit: 'pz', expiry_date: '2026-02-20', owner: 'mari' },
-  { id: 6, name: 'Formaggio', icon: '🧀', category: 'frigo', quantity: 150, unit: 'g', expiry_date: '2026-02-18', owner: 'pile' },
-  { id: 7, name: 'Burro', icon: '🧈', category: 'frigo', quantity: 250, unit: 'g', expiry_date: '2026-03-01', owner: 'shared' },
-  { id: 8, name: 'Mozzarella', icon: '🧀', category: 'frigo', quantity: 125, unit: 'g', expiry_date: '2026-02-12', owner: 'mari' },
-  { id: 9, name: 'Pasta', icon: '🍝', category: 'dispensa', quantity: 2, unit: 'kg', expiry_date: '2027-06-01', owner: 'shared' },
-  { id: 10, name: 'Riso', icon: '🍚', category: 'dispensa', quantity: 1, unit: 'kg', expiry_date: '2027-03-01', owner: 'shared' },
-  { id: 11, name: 'Olio', icon: '🫒', category: 'dispensa', quantity: 750, unit: 'ml', expiry_date: '2027-01-01', owner: 'shared' },
-  { id: 12, name: 'Tonno', icon: '🐟', category: 'dispensa', quantity: 3, unit: 'lattine', expiry_date: '2027-12-01', owner: 'mari' },
+  { id: 1, name: 'Pollo', icon: '🍗', category: 'frigo', quantity: 500, unit: 'g', expiry_date: '2026-02-09', owners: ['mari'] },
+  { id: 2, name: 'Yogurt', icon: '🥛', category: 'frigo', quantity: 2, unit: 'vasetti', expiry_date: '2026-02-10', owners: ['mari', 'gio', 'pile'] }, // Era shared
+  { id: 3, name: 'Spinaci', icon: '🥬', category: 'frigo', quantity: 200, unit: 'g', expiry_date: '2026-02-11', owners: ['gio'] },
+  { id: 4, name: 'Latte', icon: '🥛', category: 'frigo', quantity: 1, unit: 'L', expiry_date: '2026-02-15', owners: ['mari', 'gio', 'pile'] },
+  { id: 5, name: 'Uova', icon: '🥚', category: 'frigo', quantity: 6, unit: 'pz', expiry_date: '2026-02-20', owners: ['mari'] },
+  { id: 6, name: 'Formaggio', icon: '🧀', category: 'frigo', quantity: 150, unit: 'g', expiry_date: '2026-02-18', owners: ['pile'] },
+  { id: 7, name: 'Burro', icon: '🧈', category: 'frigo', quantity: 250, unit: 'g', expiry_date: '2026-03-01', owners: ['mari', 'gio'] }, // Sottogruppo!
+  { id: 8, name: 'Mozzarella', icon: '🧀', category: 'frigo', quantity: 125, unit: 'g', expiry_date: '2026-02-12', owners: ['mari'] },
+  { id: 9, name: 'Pasta', icon: '🍝', category: 'dispensa', quantity: 2, unit: 'kg', expiry_date: '2027-06-01', owners: ['mari', 'gio', 'pile'] },
+  { id: 10, name: 'Riso', icon: '🍚', category: 'dispensa', quantity: 1, unit: 'kg', expiry_date: '2027-03-01', owners: ['mari', 'gio'] }, // Sottogruppo!
+  { id: 11, name: 'Olio', icon: '🫒', category: 'dispensa', quantity: 750, unit: 'ml', expiry_date: '2027-01-01', owners: ['mari', 'gio', 'pile'] },
+  { id: 12, name: 'Tonno', icon: '🐟', category: 'dispensa', quantity: 3, unit: 'lattine', expiry_date: '2027-12-01', owners: ['mari'] },
 ];
 
 const initialShoppingList = [
@@ -95,13 +95,17 @@ export function ProductsProvider({ children }) {
         neededQty = convertToBaseUnit(requiredQty, requiredUnit);
     }
 
-    if (availableQty < neededQty) return { status: 'buy', productOwner: product.owner }; 
+    if (availableQty < neededQty) return { status: 'buy', productOwner: product.owners[0] }; // Prendo il primo proprietario come riferimento
     
-    if (product.owner !== 'mari' && product.owner !== 'shared') {
-        return { status: 'ask', productOwner: product.owner };
+    // Controllo se 'mari' è tra i proprietari
+    const isOwner = product.owners && product.owners.includes('mari');
+    if (!isOwner) {
+        // Se non è proprietaria, ritorna il primo proprietario o una stringa 'shared' se tutti
+        const ownerDisplay = product.owners.length > 1 ? product.owners.join(' & ') : product.owners[0];
+        return { status: 'ask', productOwner: ownerDisplay };
     }
 
-    return { status: 'ok', productOwner: product.owner }; 
+    return { status: 'ok', productOwner: 'mari' }; 
   };
 
   const consumeIngredients = (ingredients) => {
@@ -160,38 +164,50 @@ export function ProductsProvider({ children }) {
     setRecipes(prev => [...prev, { ...newRecipe, id: `r${Date.now()}` }]);
   };
 
-  // --- UPDATE ROBUSTO (FIX 1) ---
-  // Sostituisce la vecchia versione. Gestisce il merge dei dati e ID misti.
+  // --- UPDATE ROBUSTO ---
   const updateProduct = (id, updatedFields) => {
     setProducts(prevProducts => 
       prevProducts.map(product => {
         // Confronto "loose" (==) per gestire casi di id "1" (stringa) vs 1 (numero)
         if (product.id == id) {
-          return { ...product, ...updatedFields }; // Merge intelligente
+          // Manteniamo la compatibilità: se aggiorniamo 'owners', aggiorniamo anche 'owner' (singolare) per le card vecchie
+          const newOwners = updatedFields.owners || product.owners;
+          const legacyOwner = newOwners.length > 2 ? 'shared' : newOwners[0]; // Fallback semplice
+          
+          return { 
+              ...product, 
+              ...updatedFields, 
+              // Assicuriamoci che owners sia sempre aggiornato
+              owner: legacyOwner 
+          }; 
         }
         return product;
       })
     );
   };
   
-  // --- REMOVE ROBUSTO ---
-  // Aggiornato per usare il confronto loose (!=)
   const removeProduct = (id) => {
     setProducts(prevProducts => prevProducts.filter(product => product.id != id));
   };
 
   const addProducts = (newProducts) => {
     const productsToAdd = Array.isArray(newProducts) ? newProducts : [newProducts];
-    const formattedProducts = productsToAdd.map(p => ({
-        id: Date.now() + Math.random(),
-        name: p.name,
-        icon: p.icon || '📦',
-        category: p.category || 'dispensa',
-        quantity: parseFloat(p.quantity) || 1,
-        unit: p.unit || 'pz',
-        expiry_date: p.expiry_date || new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0],
-        owner: p.owner || 'shared'
-    }));
+    const formattedProducts = productsToAdd.map(p => {
+        // Gestione corretta dell'array owners
+        const ownersList = p.owners && p.owners.length > 0 ? p.owners : ['mari'];
+        
+        return {
+            id: Date.now() + Math.random(),
+            name: p.name,
+            icon: p.icon || '📦',
+            category: p.category || 'dispensa',
+            quantity: parseFloat(p.quantity) || 1,
+            unit: p.unit || 'pz',
+            expiry_date: p.expiry_date || new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0],
+            owners: ownersList,
+            owner: ownersList.length > 2 ? 'shared' : ownersList[0] // Legacy field
+        };
+    });
     
     setProducts(prev => [...prev, ...formattedProducts]);
   };
@@ -223,8 +239,8 @@ export function ProductsProvider({ children }) {
     recipes,
     meals,
     addRecipe,
-    updateProduct, // FIX 2: Ora punta alla funzione nuova e robusta
-    removeProduct, // FIX 2: Ora punta alla funzione nuova e robusta
+    updateProduct,
+    removeProduct,
     addProducts,
     addToShoppingList,
     consumeIngredients,
