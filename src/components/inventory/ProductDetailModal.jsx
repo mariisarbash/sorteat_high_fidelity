@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, Edit2, MessageCircle, AlertCircle, Check, Calendar, Plus, Minus, ArrowLeft, Clock } from 'lucide-react';
+import { X, Trash2, Edit2, MessageCircle, AlertCircle, Check, Calendar, Plus, Minus, ArrowLeft, Clock, ScanLine, Loader2 } from 'lucide-react';
 import { useProducts } from '../../context/ProductsContext';
 import { useWaste } from '../../context/WasteContext';
 import { toast } from 'sonner';
@@ -23,8 +23,9 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
   const [editForm, setEditForm] = useState(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
   
-  // Nuovo stato per la quantità richiesta
-  const [askQuantity, setAskQuantity] = useState('');
+  // STATI UNIFICATI PER CHIEDI / CONSUMA
+  const [actionQuantity, setActionQuantity] = useState(''); 
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     if (product) {
@@ -38,54 +39,78 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
         price: product.price || '',
         expiryDate: product.expiry_date || ''
       });
-      // Resetta la quantità richiesta ogni volta che si apre un prodotto
-      setAskQuantity('');
+      // Resetta stati
+      setActionQuantity('');
+      setIsAiLoading(false);
       setView('detail');
     }
-  }, [product]);
+  }, [product, isOpen]);
 
   if (!isOpen || !product || !editForm) return null;
 
   const currentCategory = inventoryCategories.find(c => c.id === product.category) || inventoryCategories[0];
   const isExpired = product.expiry_date && new Date(product.expiry_date) < new Date();
 
-  // Gestione tasti rapidi "Metà" e "Tutto"
-  const handleSetAskAmount = (type) => {
+  // --- VALIDAZIONE ---
+  const isQuantityValid = () => {
+    if (!actionQuantity || actionQuantity === '') return false;
+    const val = parseFloat(actionQuantity);
+    const max = parseFloat(product.quantity);
+    if (isNaN(val) || val <= 0 || val > max) return false;
+    return true;
+  };
+
+  // --- TASTI RAPIDI (Metà / Tutto) ---
+  const handleSetAmount = (type) => {
     const total = parseFloat(product.quantity);
     if (type === 'half') {
         const val = total / 2;
-        // Se sono pezzi (pz), arrotonda per difetto, altrimenti tieni 1 decimale
-        setAskQuantity(product.unit === 'pz' ? Math.floor(val) : val.toFixed(1));
+        setActionQuantity(product.unit === 'pz' ? Math.floor(val).toString() : val.toFixed(1));
     } else if (type === 'all') {
-        setAskQuantity(total);
+        setActionQuantity(total.toString());
     }
   };
 
+  // --- MOCK AI UPDATE ---
+  const handleAiUpdate = () => {
+    setIsAiLoading(true);
+    setTimeout(() => {
+        setIsAiLoading(false);
+        // Logica finta: l'AI rileva che hai consumato metà
+        const total = parseFloat(product.quantity);
+        const aiGuess = (total * 0.5).toFixed(product.unit === 'pz' ? 0 : 1);
+        setActionQuantity(aiGuess);
+        toast.success("AI: Ho rilevato che hai consumato circa metà confezione! 🤖");
+    }, 1500);
+  };
+
+  // --- SALVATAGGIO MODIFICHE (FIX 1) ---
   const handleSaveEdit = () => {
     if (!editForm.name.trim()) {
         toast.error('Inserisci un nome per il prodotto');
         return;
     }
-
-    const updatedProduct = {
-        ...product,
+    
+    // Aggiorna usando l'ID corretto e passando solo i campi necessari
+    updateProduct(product.id, {
         name: editForm.name,
         icon: editForm.icon,
-        quantity: Number(editForm.quantity) || 0,
+        quantity: Number(editForm.quantity),
         unit: editForm.unit,
         category: editForm.category,
         owner: editForm.owners.length > 1 ? 'shared' : editForm.owners[0],
         price: editForm.price,
         expiry_date: editForm.expiryDate
-    };
-
-    updateProduct(product.id, updatedProduct);
+    });
+    
     toast.success('Prodotto aggiornato');
     setView('detail');
   };
 
+  // --- CONFERMA AZIONI (FIX 2 & 3) ---
   const handleConfirmAction = () => {
-    if (view === 'delete' || (view === 'consume' && isExpired)) {
+    // 1. ELIMINA
+    if (view === 'delete') {
         if (isExpired) {
             registerWaste(product, product.quantity, product.unit, 'scaduto');
             toast.success('Prodotto buttato (Spreco registrato)');
@@ -94,29 +119,61 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
         }
         removeProduct(product.id);
         onClose();
-    } else if (view === 'consume') {
-        removeProduct(product.id);
-        toast.success('Prodotto consumato! 😋');
-        onClose();
-    } else if (view === 'ask') {
-        // Validazione
-        const reqQty = parseFloat(askQuantity);
-        const totalQty = parseFloat(product.quantity);
+    } 
+    // 2. CONSUMA (Nuova logica parziale)
+    else if (view === 'consume') {
+        if (!isQuantityValid()) return;
+        
+        const consumed = parseFloat(actionQuantity);
+        const total = parseFloat(product.quantity);
 
-        if (!askQuantity || reqQty <= 0 || reqQty > totalQty) {
+        if (consumed >= total) {
+            // Ha finito tutto -> Rimuovi
+            removeProduct(product.id);
+            toast.success('Ottimo! Hai finito il prodotto 😋');
+            onClose();
+        } else {
+            // Ha consumato solo una parte -> Aggiorna rimanenza
+            const remaining = total - consumed;
+            // Arrotonda per evitare decimali strani
+            const cleanRemaining = parseFloat(remaining.toFixed(2));
+            
+            updateProduct(product.id, { quantity: cleanRemaining });
+            toast.success(`Aggiornato! Rimangono ${cleanRemaining} ${product.unit}`);
+            setView('detail');
+        }
+    } 
+    // 3. CHIEDI (Fix persistenza e notifica)
+    else if (view === 'ask') {
+        if (!isQuantityValid()) {
             toast.error("Inserisci una quantità valida");
             return;
         }
 
-        // Aggiorna il prodotto con lo stato "In attesa"
-        const updatedProduct = {
-            ...product,
+        // Salva persistente nel DB globale
+        updateProduct(product.id, {
             hasPendingRequest: true,
             pendingRequestDate: new Date().toISOString()
-        };
-        updateProduct(product.id, updatedProduct);
+        });
 
-        toast.success(`Hai richiesto ${product.name} a ${product.owner}! 💬`);
+        // Crea e salva notifica
+        const newNotification = {
+            id: Date.now(),
+            title: `Hai chiesto ${product.name}`,
+            message: `Richiesta inviata a ${product.owner} (${actionQuantity} ${product.unit})`,
+            type: 'activity',
+            icon: product.icon || '💬',
+            iconBg: 'bg-yellow-100'
+        };
+        
+        // Salva in localStorage per persistenza notifiche
+        const existingNotifications = JSON.parse(localStorage.getItem('sorteat_notifications') || '[]');
+        localStorage.setItem('sorteat_notifications', JSON.stringify([newNotification, ...existingNotifications]));
+        
+        // Aggiorna UI notifiche se aperta
+        window.dispatchEvent(new CustomEvent('add-notification', { detail: newNotification }));
+
+        toast.success(`Richiesta inviata a ${product.owner}!`);
         setView('detail');
     }
   };
@@ -320,26 +377,32 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                 </div>
             )}
             
-            {/* VISTA ASK (CHIEDI) */}
-            {view === 'ask' && (
+            {/* VISTA ASK (CHIEDI) e CONSUME (CONSUMA) UNIFICATE */}
+            {(view === 'ask' || view === 'consume') && (
                 <div className="space-y-6 text-center">
-                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MessageCircle className="w-8 h-8 text-yellow-600" />
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${view === 'ask' ? 'bg-yellow-100' : 'bg-green-100'}`}>
+                    {view === 'ask' ? <MessageCircle className="w-8 h-8 text-yellow-600" /> : <Check className="w-8 h-8 text-green-600" />}
                   </div>
-                  <h3 className="text-2xl font-bold text-[#1A1A1A]">Chiedi prodotto</h3>
+                  
+                  <h3 className="text-2xl font-bold text-[#1A1A1A]">
+                    {view === 'ask' ? 'Chiedi prodotto' : 'Quanto ne hai usato?'}
+                  </h3>
                   <p className="text-[#666666]">
-                    Quanto {product.name} vuoi chiedere a {product.owner}?
+                    {view === 'ask' 
+                        ? `Quanto ${product.name} vuoi chiedere a ${product.owner}?`
+                        : `Aggiorna la quantità di ${product.name} consumata.`
+                    }
                   </p>
 
                   {/* Input Quantità */}
-                  <div className="bg-[#F2F0E9] p-4 rounded-2xl border-2 border-yellow-100">
+                  <div className={`bg-[#F2F0E9] p-4 rounded-2xl border-2 transition-colors ${!isQuantityValid() && actionQuantity ? 'border-red-300 bg-red-50' : view === 'ask' ? 'border-yellow-100' : 'border-green-100'}`}>
                      <div className="flex items-center justify-center gap-2 mb-2">
                         <input 
                           type="number" 
-                          value={askQuantity}
-                          onChange={(e) => setAskQuantity(e.target.value)}
+                          value={actionQuantity}
+                          onChange={(e) => setActionQuantity(e.target.value)}
                           placeholder="0"
-                          className="w-24 text-center text-3xl font-bold bg-transparent border-b-2 border-yellow-300 focus:outline-none focus:border-yellow-500 text-[#1A1A1A]"
+                          className="w-24 text-center text-3xl font-bold bg-transparent border-b-2 border-gray-300 focus:outline-none focus:border-black text-[#1A1A1A]"
                           max={product.quantity}
                         />
                         <span className="text-gray-400 font-medium text-lg">{product.unit}</span>
@@ -350,46 +413,50 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                   {/* Tasti Rapidi */}
                   <div className="grid grid-cols-2 gap-3">
                     <button 
-                      onClick={() => handleSetAskAmount('half')}
-                      className="py-2 px-4 rounded-xl bg-yellow-50 text-yellow-700 font-semibold text-sm hover:bg-yellow-100 transition-colors"
+                      onClick={() => handleSetAmount('half')}
+                      className="py-2 px-4 rounded-xl bg-gray-50 text-gray-700 font-semibold text-sm hover:bg-gray-100 transition-colors"
                     >
-                      Metà ({product.unit === 'pz' ? Math.floor(product.quantity/2) : (product.quantity/2).toFixed(1)} {product.unit})
+                      Metà ({product.unit === 'pz' ? Math.floor(product.quantity/2) : (product.quantity/2).toFixed(1)})
                     </button>
                     <button 
-                      onClick={() => handleSetAskAmount('all')}
-                      className="py-2 px-4 rounded-xl bg-yellow-50 text-yellow-700 font-semibold text-sm hover:bg-yellow-100 transition-colors"
+                      onClick={() => handleSetAmount('all')}
+                      className="py-2 px-4 rounded-xl bg-gray-50 text-gray-700 font-semibold text-sm hover:bg-gray-100 transition-colors"
                     >
-                      Tutto ({product.quantity} {product.unit})
+                      Tutto ({product.quantity})
                     </button>
                   </div>
+
+                  {/* TASTO AI (Solo Consuma) */}
+                  {view === 'consume' && (
+                      <button 
+                        onClick={handleAiUpdate}
+                        disabled={isAiLoading}
+                        className="w-full py-3 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50 text-indigo-700 font-bold flex items-center justify-center gap-2 hover:bg-indigo-100 transition-colors"
+                      >
+                        {isAiLoading ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" /> Analisi foto in corso...
+                            </>
+                        ) : (
+                            <>
+                                <ScanLine className="w-5 h-5" /> Aggiorna con AI
+                            </>
+                        )}
+                      </button>
+                  )}
                 </div>
             )}
 
-            {/* VISTE DELETE / CONSUME */}
+            {/* VISTA DELETE */}
             {view === 'delete' && (
                 <div className="text-center py-6">
                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
                         <AlertCircle className="w-8 h-8" />
                     </div>
                     <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">Eliminare prodotto?</h3>
-                    <p className="text-[#666666]">Questa azione non può essere annullata.</p>
+                    <p className="text-[#666666]">Stai per buttare questo prodotto. Se è scaduto verrà registrato come spreco.</p>
                 </div>
             )}
-
-            {view === 'consume' && (
-                <div className="text-center py-6">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600">
-                        <Check className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">
-                        {isExpired ? 'Registra Spreco' : 'Prodotto Consumato?'}
-                    </h3>
-                    <p className="text-[#666666]">
-                        {isExpired ? 'Sembra che questo prodotto sia scaduto. Verrà registrato come spreco.' : 'Hai finito questo prodotto? Verrà rimosso dall\'inventario.'}
-                    </p>
-                </div>
-            )}
-
           </div>
 
           {/* FOOTER BOTTONI */}
@@ -404,10 +471,11 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                     </button>
                     
                     {product.owner !== 'mari' && product.owner !== 'shared' ? (
+                        // USA LO STATO PERSISTENTE hasPendingRequest
                         product.hasPendingRequest ? (
                             <button 
                                 disabled
-                                className="flex-1 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                                className="flex-1 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg bg-gray-100 text-gray-500 cursor-not-allowed opacity-60"
                             >
                                 <Clock className="w-5 h-5" /> In attesa
                             </button>
@@ -436,16 +504,18 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
             {(view === 'ask' || view === 'consume' || view === 'delete') && (
                 <button 
                     onClick={handleConfirmAction} 
-                    disabled={view === 'ask' && (!askQuantity || parseFloat(askQuantity) <= 0 || parseFloat(askQuantity) > parseFloat(product.quantity))}
+                    disabled={(view === 'ask' || view === 'consume') && !isQuantityValid()}
                     className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg transition-all active:scale-[0.98] shadow-lg ${
-                        view === 'ask' ? 'bg-yellow-400 text-yellow-900 shadow-yellow-400/20 disabled:opacity-50 disabled:cursor-not-allowed' : 
-                        view === 'delete' ? 'bg-red-500 text-white shadow-red-500/20' :
-                        'bg-[#3A5A40] text-white shadow-[#3A5A40]/30'
+                        view === 'ask' 
+                          ? 'bg-yellow-400 text-yellow-900 shadow-yellow-400/20 disabled:opacity-50 disabled:cursor-not-allowed' 
+                          : view === 'delete' 
+                             ? 'bg-red-500 text-white shadow-red-500/20' 
+                             : 'bg-[#3A5A40] text-white shadow-[#3A5A40]/30 disabled:opacity-50'
                     }`}
                 >
                     {view === 'ask' ? 'Invia Richiesta' : 
                      view === 'delete' ? 'Sì, Elimina' : 
-                     isExpired ? 'Butta e Registra' : 'Conferma Consumo'}
+                     'Conferma Consumo'}
                 </button>
             )}
           </div>

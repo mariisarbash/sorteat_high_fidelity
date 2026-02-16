@@ -81,7 +81,6 @@ export function ProductsProvider({ children }) {
     return false;
   };
 
-  // FIX 1: Funzione per controllare la disponibilità convertendo le unità
   const checkIngredientAvailability = (ingName, requiredQty, requiredUnit) => {
     const product = products.find(p => p.name.toLowerCase().includes(ingName.toLowerCase()));
     
@@ -161,12 +160,24 @@ export function ProductsProvider({ children }) {
     setRecipes(prev => [...prev, { ...newRecipe, id: `r${Date.now()}` }]);
   };
 
-  const updateProduct = (updatedProduct) => {
-    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+  // --- UPDATE ROBUSTO (FIX 1) ---
+  // Sostituisce la vecchia versione. Gestisce il merge dei dati e ID misti.
+  const updateProduct = (id, updatedFields) => {
+    setProducts(prevProducts => 
+      prevProducts.map(product => {
+        // Confronto "loose" (==) per gestire casi di id "1" (stringa) vs 1 (numero)
+        if (product.id == id) {
+          return { ...product, ...updatedFields }; // Merge intelligente
+        }
+        return product;
+      })
+    );
   };
   
-  const removeProduct = (productId) => {
-    setProducts(prev => prev.filter(p => p.id !== productId));
+  // --- REMOVE ROBUSTO ---
+  // Aggiornato per usare il confronto loose (!=)
+  const removeProduct = (id) => {
+    setProducts(prevProducts => prevProducts.filter(product => product.id != id));
   };
 
   const addProducts = (newProducts) => {
@@ -194,7 +205,6 @@ export function ProductsProvider({ children }) {
         quantity: item.qty || 1,
         unit: item.unit || 'pz',
         department: 'dispensa',
-        // FIX 3: Usa gli owner passati (se ci sono), altrimenti shared
         owners: item.owners && item.owners.length > 0 ? item.owners : ['shared'],
         is_checked: false
     }));
@@ -213,14 +223,14 @@ export function ProductsProvider({ children }) {
     recipes,
     meals,
     addRecipe,
-    updateProduct,
-    removeProduct,
+    updateProduct, // FIX 2: Ora punta alla funzione nuova e robusta
+    removeProduct, // FIX 2: Ora punta alla funzione nuova e robusta
     addProducts,
     addToShoppingList,
     consumeIngredients,
     updateMealInCalendar,
     removeMealFromCalendar,
-    checkIngredientAvailability, // Esposto per i modali
+    checkIngredientAvailability,
     restoreData,
     expiringProducts: useMemo(() => {
         return products
