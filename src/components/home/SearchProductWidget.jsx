@@ -1,28 +1,29 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '../../utils';
 import { Search } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 export default function SearchProductWidget() {
+  const navigate = useNavigate();
+
+  const handleSearchClick = () => {
+    // Naviga all'inventario passando lo stato per l'autofocus
+    navigate('/inventario', { state: { autoFocus: true } });
+  };
+
   return (
-    <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ delay: 0.1 }}
-      className="mx-5 mb-4"
-    >
-      <Link 
-        to={createPageUrl('Inventario')}
-        className="block bg-white rounded-2xl p-4 card-shadow active:scale-[0.98] transition-transform"
+    <div className="px-5 mb-2">
+      <button 
+        onClick={handleSearchClick}
+        className="w-full bg-white p-4 rounded-3xl card-shadow flex items-center gap-3 text-left transition-transform active:scale-[0.98]"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#F2F0E9] flex items-center justify-center">
-            <Search className="w-5 h-5 text-[#3A5A40]" />
-          </div>
-          <span className="text-[#666666] text-sm font-medium">Cerca un prodotto nell'inventario...</span>
+        <div className="w-10 h-10 bg-[#F2F0E9] rounded-full flex items-center justify-center shrink-0">
+          <Search className="w-5 h-5 text-gray-400" />
         </div>
-      </Link>
-    </motion.div>
+        <div className="flex-1">
+          <p className="font-bold text-[#1A1A1A] text-sm">Cerca prodotto...</p>
+          <p className="text-xs text-gray-400">Trova in frigo, dispensa o freezer</p>
+        </div>
+      </button>
+    </div>
   );
 }

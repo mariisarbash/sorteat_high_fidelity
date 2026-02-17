@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Filter, ArrowDownAZ, CalendarDays, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -14,10 +14,22 @@ export default function InventoryHeader({
   sortOption,
   onSortChange,
   filterOwner,
-  onFilterOwnerChange
+  onFilterOwnerChange,
+  shouldAutoFocus // NUOVA PROP
 }) {
   const [isFocused, setIsFocused] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const inputRef = useRef(null); // Ref per l'input
+
+  // EFFETTO AUTO-FOCUS
+  useEffect(() => {
+    if (shouldAutoFocus && inputRef.current) {
+        // Un piccolo timeout aiuta con le transizioni di pagina
+        setTimeout(() => {
+            inputRef.current.focus();
+        }, 100);
+    }
+  }, [shouldAutoFocus]);
 
   const getSortIcon = (option) => {
     switch(option) {
@@ -38,11 +50,7 @@ export default function InventoryHeader({
   };
 
   return (
-    // FIX 1: Cambiato bg-white in bg-[#F7F6F3]/95 (colore pagina) + blur.
-    // Rimosso il bordo inferiore per massima pulizia.
     <div className="px-5 pt-6 pb-2 bg-[#F7F6F3]/95 backdrop-blur-sm sticky top-0 z-20 transition-all">
-      
-      {/* HEADER ROW: Titolo e Bottone Filtro */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-[#1A1A1A]">Inventario</h1>
         
@@ -55,15 +63,12 @@ export default function InventoryHeader({
           }`}
         >
           <Filter className="w-5 h-5" />
-          
-          {/* FIX 2: Pallino rosso riposizionato correttamente (top-2 right-2) */}
           {(filterOwner !== 'all' || sortOption !== 'name') && (
             <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#1A1A1A]" />
           )}
         </button>
       </div>
 
-      {/* FILTERS PANEL */}
       <AnimatePresence>
         {showFilters && (
           <motion.div
@@ -72,7 +77,6 @@ export default function InventoryHeader({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden mb-4 space-y-4"
           >
-            {/* 1. ORDINAMENTO */}
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Ordina per</p>
               <div className="flex gap-2">
@@ -93,11 +97,9 @@ export default function InventoryHeader({
               </div>
             </div>
 
-            {/* 2. FILTRO PROPRIETARIO */}
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Filtra per</p>
               <div className="flex items-center gap-2">
-                {/* Tutti */}
                 <button
                   onClick={() => onFilterOwnerChange('all')}
                   className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
@@ -108,8 +110,6 @@ export default function InventoryHeader({
                 >
                   Tutti
                 </button>
-
-                {/* Coinquilini */}
                 {ROOMMATES.map((roommate) => (
                   <button
                     key={roommate.id}
@@ -123,8 +123,6 @@ export default function InventoryHeader({
                     {roommate.initial}
                   </button>
                 ))}
-
-                {/* Casa / Shared */}
                 <button
                   onClick={() => onFilterOwnerChange('shared')}
                   className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all border-2 ${
@@ -137,28 +135,25 @@ export default function InventoryHeader({
                 </button>
               </div>
             </div>
-            
             <div className="h-px bg-gray-200/50 w-full" />
           </motion.div>
         )}
       </AnimatePresence>
       
-      {/* SEARCH BAR */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
+          ref={inputRef} // Collegato il Ref
           type="text"
           placeholder="Cerca un prodotto..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          // Input sfondo bianco per contrasto leggero su sfondo pagina
           className={`w-full h-12 pl-12 pr-12 bg-white rounded-2xl text-sm text-[#1A1A1A] placeholder:text-gray-400 transition-all font-medium focus:outline-none shadow-sm ${
             isFocused ? 'ring-2 ring-[#1A1A1A]/5' : ''
           }`}
         />
-        
         <AnimatePresence>
           {searchQuery && (
             <motion.button

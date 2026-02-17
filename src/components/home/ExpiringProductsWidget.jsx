@@ -1,89 +1,54 @@
 import React from 'react';
+import { useProducts } from '../../context/ProductsContext';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from '../../utils';
 import { AlertTriangle } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useProducts, getDaysUntilExpiry } from '../../context/ProductsContext';
+// Importiamo la Card Master per garantire uniformità totale
+import ProductCard from '../inventory/ProductCard';
 
-export default function ExpiringProductsWidget() {
-  // Usa il contesto globale dei prodotti
+export default function ExpiringProductsWidget({ onProductClick }) {
   const { expiringProducts } = useProducts();
 
-  const getDaysText = (days) => {
-    if (days <= 0) return 'Scaduto';
-    if (days === 1) return 'Domani';
-    return `${days} giorni`;
-  };
+  // Prendiamo solo i primi 5 per non intasare la home
+  const displayProducts = expiringProducts.slice(0, 5);
 
-  const getExpiryColor = (days) => {
-    if (days <= 0) return 'bg-red-500 text-white';
-    if (days <= 1) return 'bg-red-100 text-red-700';
-    if (days <= 2) return 'bg-orange-100 text-orange-700';
-    return 'bg-yellow-100 text-yellow-700';
-  };
-
-  const getOwnerBadge = (owner) => {
-    if (owner === 'mari') return null;
-    if (owner === 'gio') return { label: 'G', color: 'bg-blue-500' };
-    if (owner === 'pile') return { label: 'P', color: 'bg-purple-500' };
-    if (owner === 'shared') return { label: '🏠', color: 'bg-[#A3B18A]' };
-    return null;
-  };
-
-  // Non mostrare il widget se non ci sono prodotti in scadenza
-  if (expiringProducts.length === 0) return null;
+  if (displayProducts.length === 0) return null;
 
   return (
-    <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ delay: 0.15 }}
-      className="mx-5 mb-4"
-    >
-      <div className="bg-white rounded-3xl p-5 card-shadow">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+    <div className="mx-5 mb-4">
+      {/* HEADER: Titolo + Link Vedi Tutti */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-[#D4A373]" />
-            <h3 className="font-semibold text-[#1A1A1A]">In scadenza</h3>
-          </div>
-          <Link 
-            to={createPageUrl('Inventario')}
-            className="text-xs text-[#3A5A40] font-medium"
-          >
-            Vedi tutti
-          </Link>
+            <h3 className="font-bold text-[#1A1A1A] text-sm">
+                In scadenza <span className="ml-1 bg-red-100 text-red-600 px-1.5 py-0.5 rounded-md text-[10px]">{expiringProducts.length}</span>
+            </h3>
         </div>
-        
-        <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
-          {expiringProducts.map((product, index) => {
-            const daysLeft = getDaysUntilExpiry(product.expiry_date);
-            const ownerBadge = getOwnerBadge(product.owner);
-            
-            return (
-              <motion.div
-                key={product.id}
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2 + index * 0.05 }}
-                className="flex-shrink-0 w-24"
-              >
-                <div className={`bg-[#F2F0E9] rounded-2xl p-3 text-center relative ${daysLeft <= 0 ? 'opacity-75' : ''}`}>
-                  {ownerBadge && (
-                    <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full ${ownerBadge.color} text-white text-[10px] font-bold flex items-center justify-center border-2 border-white`}>
-                      {ownerBadge.label}
-                    </div>
-                  )}
-                  <span className={`text-3xl ${daysLeft <= 0 ? 'grayscale-[50%]' : ''}`}>{product.icon}</span>
-                  <p className="text-xs font-medium text-[#1A1A1A] mt-2 truncate">{product.name}</p>
-                  <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${getExpiryColor(daysLeft)}`}>
-                    {getDaysText(daysLeft)}
-                  </span>
-                </div>
-              </motion.div>
-            );
-          })}
+        <Link 
+            to="/inventario" 
+            className="text-xs text-[#3A5A40] font-bold hover:underline"
+        >
+            Vedi tutti
+        </Link>
+      </div>
+      
+      {/* CAROSELLO CARD - IDENTICO ALL'INVENTARIO */}
+      <div className="overflow-x-auto no-scrollbar pb-4 pt-1 -mx-5 px-5">
+        <div className="flex gap-2 w-max">
+          {displayProducts.map((product, index) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              index={index}
+              onClick={onProductClick}
+              // isHighlighted non serve qui nella home, ma possiamo passarlo se vogliamo
+              
+              // DIMENSIONI QUADRATINO (GEMELLE DELL'INVENTARIO):
+              // w-28 (112px) x h-32 (128px)
+              className="w-28 h-32 flex-shrink-0" 
+            />
+          ))}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

@@ -1,12 +1,18 @@
 import React from 'react';
 import ProductCard from './ProductCard';
 
-export default function ProductsGrid({ products, title, onProductClick, highlightedProductId, hideEmptyState }) {
+export default function ProductsGrid({ 
+  products, 
+  title, 
+  onProductClick, 
+  highlightedProductId, 
+  hideEmptyState, 
+  isSearchMode,
+  className = "px-3 pb-24" // Padding laterale ridotto (px-3)
+}) {
   
-  // FIX: Se non ci sono prodotti, controlliamo se dobbiamo nascondere il messaggio di errore
-  // (es. perché abbiamo trovato risultati nella sezione "In scadenza")
   if (products.length === 0) {
-    if (hideEmptyState) return null; // Non mostrare nulla, nemmeno il messaggio di errore
+    if (hideEmptyState) return null;
 
     return (
       <div className="px-5 py-8 text-center">
@@ -17,11 +23,15 @@ export default function ProductsGrid({ products, title, onProductClick, highligh
   }
 
   return (
-    <div className="px-5 py-4">
+    <div className={className}>
       {title && (
-        <h3 className="font-semibold text-[#1A1A1A] mb-3">{title}</h3>
+        <h3 className="font-bold text-[#1A1A1A] mb-3 px-1 text-sm">{title}</h3>
       )}
-      <div className="grid grid-cols-4 gap-3">
+      
+      {/* 3 COLONNE: Larghezza circa 115px.
+          Con h-32, otteniamo il formato quadrato richiesto.
+      */}
+      <div className="grid grid-cols-3 gap-2">
         {products.map((product, index) => (
           <ProductCard 
             key={product.id} 
@@ -29,6 +39,9 @@ export default function ProductsGrid({ products, title, onProductClick, highligh
             index={index} 
             onClick={onProductClick}
             isHighlighted={product.id === highlightedProductId}
+            showCategory={isSearchMode}
+            // Altezza fissa h-32 per garantire il formato quadrato anche qui
+            className="h-32"
           />
         ))}
       </div>

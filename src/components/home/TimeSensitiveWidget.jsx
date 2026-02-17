@@ -1,23 +1,25 @@
-import React, { useState } from 'react';
-import { Sun, Cloud, Moon, Utensils, Coffee, Cookie, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { toast } from 'sonner';
+import React from 'react';
+import { Sun, Moon, Coffee, Utensils, CloudSun, Sunset, ChefHat } from 'lucide-react';
+import { useProducts } from '../../context/ProductsContext';
 
+// 1. LOGICA ORARIA SINCRONIZZATA CON LA CUCINA
 const getTimeContext = () => {
   const hour = new Date().getHours();
+  // Uso i decimali per gestire le mezz'ore (es. 14.5 = 14:30)
+  const time = hour + (new Date().getMinutes() / 60);
   
-  if (hour >= 6 && hour < 10) return 'mattina';
-  if (hour >= 10 && hour < 12) return 'mezzogiorno';
-  if (hour >= 12 && hour < 14.5) return 'pranzo';
-  if (hour >= 14.5 && hour < 17) return 'pomeriggio';
-  if (hour >= 17 && hour < 22.5) return 'sera';
+  if (time >= 6 && time < 10) return 'mattina';
+  if (time >= 10 && time < 12) return 'mezzogiorno';
+  if (time >= 12 && time < 14.5) return 'pranzo';
+  if (time >= 14.5 && time < 17) return 'pomeriggio';
+  if (time >= 17 && time < 22.5) return 'sera';
   return 'notte';
 };
 
 const getGreeting = (timeContext) => {
   switch (timeContext) {
     case 'mattina': return 'Buongiorno';
-    case 'mezzogiorno': return 'Buongiorno';
+    case 'mezzogiorno': return 'Buona giornata';
     case 'pranzo': return 'Buon pranzo';
     case 'pomeriggio': return 'Buon pomeriggio';
     case 'sera': return 'Buonasera';
@@ -26,161 +28,104 @@ const getGreeting = (timeContext) => {
   }
 };
 
-const timeContextData = {
-  mattina: {
-    icon: Sun,
-    gradient: 'from-amber-100 to-orange-50',
-    iconColor: 'text-amber-500',
-    message: 'Non dimenticarti di scongelare il pollo per stasera',
-    action: 'Fatto',
-    actionType: 'defrost'
-  },
-  mezzogiorno: {
-    icon: Cloud,
-    gradient: 'from-sky-100 to-blue-50',
-    iconColor: 'text-sky-500',
-    message: 'Pile è all\'Unes! Vuoi aggiungere qualcosa alla lista della spesa?',
-    action: 'Aggiungi',
-    actionType: 'addToList'
-  },
-  pranzo: {
-    icon: Utensils,
-    gradient: 'from-green-100 to-emerald-50',
-    iconColor: 'text-green-600',
-    message: 'Hai cucinato pasta al pesto per 1 persona. Posso eliminare gli ingredienti usati dall\'inventario?',
-    action: 'Sì',
-    actionSecondary: 'No',
-    actionType: 'removeIngredients'
-  },
-  pomeriggio: {
-    icon: Cookie,
-    gradient: 'from-[#A3B18A]/30 to-[#A3B18A]/10',
-    iconColor: 'text-[#3A5A40]',
-    message: 'Snack vegani da fare in 10 minuti',
-    action: 'Scopri',
-    actionType: 'discover'
-  },
-  sera: {
-    icon: Sparkles,
-    gradient: 'from-violet-100 to-purple-50',
-    iconColor: 'text-violet-500',
-    message: 'Piani per cena: Carbonara per 2 persone',
-    action: 'Apri ricetta',
-    actionType: 'openRecipe'
-  },
-  notte: {
-    icon: Moon,
-    gradient: 'from-indigo-100 to-slate-100',
-    iconColor: 'text-indigo-400',
-    message: 'Voglia di uno spuntino notturno? 5 idee salutari',
-    action: 'Scopri',
-    actionType: 'discover'
-  }
+// Mappa per sapere quale pasto cercare nel DB in base all'orario
+const getMealTypeForTime = (timeContext) => {
+    switch (timeContext) {
+      case 'mattina': return 'colazione';
+      case 'mezzogiorno': return 'snack'; // o spuntino
+      case 'pranzo': return 'pranzo';
+      case 'pomeriggio': return 'merenda'; // o snack
+      case 'sera': return 'cena';
+      case 'notte': return 'snack';
+      default: return 'pranzo';
+    }
 };
 
-export default function TimeSensitiveWidget({ userName = 'Mari' }) {
-  const [actionDone, setActionDone] = useState(false);
-  const timeContext = getTimeContext();
-  const data = timeContextData[timeContext];
-  const Icon = data.icon;
-  const greeting = getGreeting(timeContext);
-
-  const handleAction = () => {
-    switch (data.actionType) {
-      case 'defrost':
-        toast.success('Pollo spostato dal freezer al frigo!', {
-          icon: '🍗'
-        });
-        setActionDone(true);
-        break;
-      case 'addToList':
-        toast.success('Reindirizzamento alla lista della spesa', {
-          icon: '🛒'
-        });
-        break;
-      case 'removeIngredients':
-        toast.success('Ingredienti rimossi dall\'inventario', {
-          icon: '✅'
-        });
-        setActionDone(true);
-        break;
-      case 'discover':
-      case 'openRecipe':
-        toast.success('Funzionalità in arrivo!', {
-          icon: '🚀'
-        });
-        break;
+const getTimeIcon = (timeContext) => {
+    switch (timeContext) {
+        case 'mattina': return <Sun className="w-5 h-5 text-amber-500" />;
+        case 'mezzogiorno': return <CloudSun className="w-5 h-5 text-sky-500" />;
+        case 'pranzo': return <Utensils className="w-5 h-5 text-green-600" />;
+        case 'pomeriggio': return <Coffee className="w-5 h-5 text-orange-500" />;
+        case 'sera': return <Sunset className="w-5 h-5 text-indigo-500" />;
+        case 'notte': return <Moon className="w-5 h-5 text-slate-400" />;
+        default: return <Sun className="w-5 h-5 text-amber-500" />;
     }
-  };
+};
 
-  const handleSecondaryAction = () => {
-    toast('Ingredienti mantenuti nell\'inventario', {
-      icon: '📦'
-    });
-    setActionDone(true);
-  };
-
-  if (actionDone && (data.actionType === 'defrost' || data.actionType === 'removeIngredients')) {
-    return (
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="mx-5 mb-4"
-      >
-        <div className={`bg-gradient-to-br ${data.gradient} rounded-3xl p-5 card-shadow`}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className={`w-10 h-10 rounded-2xl bg-white/60 flex items-center justify-center ${data.iconColor}`}>
-              <Icon className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-[#1A1A1A]">{greeting}, {userName}</h2>
-            </div>
-          </div>
-          <p className="text-[#1A1A1A]/80 text-sm font-medium flex items-center gap-2">
-            <span className="text-lg">✅</span> Fatto! Tutto aggiornato.
-          </p>
-        </div>
-      </motion.div>
-    );
-  }
+export default function TimeSensitiveWidget({ userName, onMealClick }) {
+  const { meals } = useProducts();
+  
+  const timeContext = getTimeContext();
+  const greeting = getGreeting(timeContext);
+  const icon = getTimeIcon(timeContext);
+  
+  const targetMealType = getMealTypeForTime(timeContext);
+  
+  // Cerchiamo un pasto per OGGI (day 0) che corrisponda al tipo (es. 'pranzo')
+  // O che sia uno 'snack' generico se siamo in orari intermedi
+  const currentMeal = meals.find(m => 
+    m.day === 0 && 
+    (m.type === targetMealType || (['mezzogiorno', 'pomeriggio', 'notte'].includes(timeContext) && m.type === 'snack')) && 
+    !m.isEmpty
+  );
 
   return (
-    <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="mx-5 mb-4"
-    >
-      <div className={`bg-gradient-to-br ${data.gradient} rounded-3xl p-5 card-shadow`}>
-        <div className="flex items-center gap-3 mb-3">
-          <div className={`w-10 h-10 rounded-2xl bg-white/60 flex items-center justify-center ${data.iconColor}`}>
-            <Icon className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-[#1A1A1A]">{greeting}, {userName}</h2>
-          </div>
-        </div>
-        
-        <p className="text-[#1A1A1A]/80 text-sm mb-4 leading-relaxed">
-          {data.message}
-        </p>
-        
-        <div className="flex gap-2">
-          <button
-            onClick={handleAction}
-            className="px-5 py-2.5 bg-[#3A5A40] text-white font-semibold text-sm rounded-xl active:scale-95 transition-transform"
-          >
-            {data.action}
-          </button>
-          {data.actionSecondary && (
-            <button
-              onClick={handleSecondaryAction}
-              className="px-5 py-2.5 bg-white/60 text-[#1A1A1A] font-semibold text-sm rounded-xl active:scale-95 transition-transform"
-            >
-              {data.actionSecondary}
-            </button>
-          )}
-        </div>
+    <div className="px-5 mb-2 mt-4">
+      {/* Intestazione Saluto */}
+      <div className="flex items-center gap-2 mb-3 px-1">
+        {icon}
+        <h2 className="text-xl font-bold text-[#1A1A1A]">
+          {greeting}, <span className="text-[#3A5A40]">{userName}</span>
+        </h2>
       </div>
-    </motion.div>
+      
+      {currentMeal ? (
+        // CASO 1: C'è un pasto pianificato -> Mostra la Card "In Programma"
+        <button 
+          onClick={() => onMealClick && onMealClick(currentMeal)}
+          className="w-full bg-white rounded-3xl p-4 card-shadow border border-gray-100 flex items-center gap-4 active:scale-[0.98] transition-all text-left relative overflow-hidden"
+        >
+           {/* Indicatore laterale verde */}
+           <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#3A5A40]" />
+
+           <div className="w-12 h-12 bg-[#F2F0E9] rounded-2xl flex items-center justify-center text-2xl shrink-0 ml-2">
+              {currentMeal.icon || (['snack', 'merenda'].includes(targetMealType) ? '🍪' : '🍽️')}
+           </div>
+
+           <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#3A5A40] bg-[#3A5A40]/10 px-2 py-0.5 rounded-full">
+                    In programma
+                 </span>
+              </div>
+              
+              <p className="font-bold text-lg text-[#1A1A1A] leading-tight truncate">
+                  {currentMeal.name}
+              </p>
+              
+              <div className="flex items-center gap-1 text-gray-500 text-xs mt-1">
+                 <ChefHat className="w-3 h-3" />
+                 <span className="truncate">Chef: {currentMeal.chef} • {currentMeal.participants?.length || 1} persone</span>
+              </div>
+           </div>
+        </button>
+      ) : (
+        // CASO 2: Nessun piano -> Mostra Card "Vuota" (Suggerimento)
+        <div className="bg-white rounded-3xl p-5 card-shadow border border-gray-100 flex items-center gap-4">
+           <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl shrink-0 grayscale opacity-70">
+              {['pomeriggio', 'mezzogiorno', 'notte'].includes(timeContext) ? '☕' : '🍃'}
+           </div>
+           <div>
+              <p className="font-bold text-[#1A1A1A] text-sm">Nessun piano per {timeContext}</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                 {['pomeriggio', 'mezzogiorno', 'notte'].includes(timeContext) 
+                    ? "È il momento perfetto per una pausa!" 
+                    : "Dai un'occhiata al frigo o crea una ricetta."}
+              </p>
+           </div>
+        </div>
+      )}
+    </div>
   );
 }

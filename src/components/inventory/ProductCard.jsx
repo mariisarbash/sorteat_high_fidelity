@@ -2,14 +2,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import AvatarStack from '../spesa/AvatarStack';
 
-// Definisco le categorie qui per mappare l'icona
 const CATEGORIES_MAP = {
   frigo: { name: 'Frigo', icon: '❄️' },
   dispensa: { name: 'Dispensa', icon: '🗄️' },
   freezer: { name: 'Freezer', icon: '🧊' },
 };
 
-export default function ProductCard({ product, index, onClick, isHighlighted, showCategory }) {
+export default function ProductCard({ product, index, onClick, isHighlighted, showCategory, className = '' }) {
   const getDaysUntilExpiry = () => {
     if (!product.expiry_date) return null;
     const today = new Date();
@@ -22,21 +21,27 @@ export default function ProductCard({ product, index, onClick, isHighlighted, sh
 
   const daysLeft = getDaysUntilExpiry();
   
+  const getExpiryText = () => {
+    if (daysLeft === null) return '';
+    if (daysLeft <= 0) return 'Scaduto';
+    if (daysLeft === 1) return 'Domani';
+    return `${daysLeft}gg`; // "gg" salva spazio vitale nel quadratino
+  };
+
   const getExpiryStyle = () => {
     if (daysLeft === null) return '';
-    if (daysLeft <= 0) return 'grayscale-[30%] opacity-80';
-    if (daysLeft <= 1) return 'opacity-90';
-    if (daysLeft <= 3) return '';
-    return '';
+    if (daysLeft <= 0) return 'bg-red-500 text-white border-red-500';
+    if (daysLeft === 1) return 'bg-red-100 text-red-700 border-red-100';
+    if (daysLeft <= 3) return 'bg-orange-100 text-orange-700 border-orange-100';
+    return 'bg-yellow-100 text-yellow-700 border-yellow-100';
   };
 
   const productOwners = product.owners || (product.owner ? [product.owner] : ['shared']);
-  
-  // Recupera info categoria
   const categoryInfo = CATEGORIES_MAP[product.category] || { name: '', icon: '' };
 
   return (
     <motion.div
+      layout
       initial={{ scale: 0.9, opacity: 0 }}
       animate={
         isHighlighted 
@@ -44,7 +49,7 @@ export default function ProductCard({ product, index, onClick, isHighlighted, sh
         : { scale: 1, opacity: 1 }
       }
       transition={{ delay: index * 0.03 }}
-      className="active:scale-95 transition-transform cursor-pointer relative pt-2 pr-2"
+      className={`active:scale-95 transition-transform cursor-pointer relative ${className}`}
       onClick={() => onClick?.(product)}
     >
       {isHighlighted && (
@@ -52,33 +57,46 @@ export default function ProductCard({ product, index, onClick, isHighlighted, sh
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 1, 0] }}
             transition={{ duration: 1.5 }}
-            className="absolute top-2 right-2 bottom-0 left-0 bg-yellow-400/50 rounded-[18px] blur-sm z-0"
+            className="absolute -top-1 -right-1 -bottom-1 -left-1 bg-yellow-400/50 rounded-[18px] blur-md z-0"
         />
       )}
       
-      <div className={`bg-[#F2F0E9] rounded-2xl p-3 text-center relative z-10 ${getExpiryStyle()} ${isHighlighted ? 'ring-2 ring-yellow-400' : ''}`}>
+      {/* DESIGN "QUADRATINO":
+          - h-32 (128px): Altezza quasi uguale alla larghezza (~115px).
+          - p-2: Padding minimo per massimizzare lo spazio interno.
+      */}
+      <div className={`bg-white rounded-2xl p-2 card-shadow relative z-10 flex flex-col justify-between h-32 w-full border-2 ${isHighlighted ? 'border-yellow-400' : 'border-transparent'}`}>
         
-        {/* FIX LOCATION: Badge categoria in alto a sinistra (solo in ricerca) */}
         {showCategory && (
-          <div className="absolute -top-2 -left-1 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-500 border border-gray-100 shadow-sm z-20 flex items-center gap-1">
+          <div className="absolute -top-1.5 -left-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded-full text-[9px] font-bold text-gray-500 border border-gray-100 shadow-sm z-20 flex items-center gap-1">
              <span>{categoryInfo.icon}</span> {categoryInfo.name}
           </div>
         )}
 
-        {/* AvatarStack in alto a destra */}
-        <div className="absolute -top-2 -right-2 z-10">
-            <AvatarStack owners={productOwners} />
+        {/* Avatar spostato leggermente più in alto a destra */}
+        <div className="absolute top-1.5 right-1.5 z-10">
+            <AvatarStack owners={productOwners} size="xs" />
         </div>
         
-        <div className="text-3xl mb-2 mt-1">{product.icon || '📦'}</div>
+        {/* Icona prodotto: Spostata in alto per non schiacciare il testo sotto */}
+        <div className="text-3xl mt-1.5 ml-1">{product.icon || '📦'}</div>
         
-        <p className="text-xs font-semibold text-[#1A1A1A] truncate">{product.name}</p>
-        
-        {product.quantity && (
-          <p className="text-[10px] text-[#666666] mt-0.5">
-            {product.quantity} {product.unit || ''}
-          </p>
-        )}
+        {/* Blocco Info Inferiore */}
+        <div className="w-full flex flex-col gap-0.5">
+            <p className="text-xs font-bold text-[#1A1A1A] truncate w-full leading-tight">
+                {product.name}
+            </p>
+            <p className="text-[10px] text-[#666666] font-medium leading-none mb-1">
+                {product.quantity} {product.unit || ''}
+            </p>
+            
+            {/* Badge Scadenza: Se presente, toglie un po' di margine ma ci sta grazie a h-32 */}
+            {daysLeft !== null && daysLeft <= 3 && (
+                <div className={`text-[9px] font-bold px-1 py-0.5 rounded-md w-full text-center border truncate ${getExpiryStyle()}`}>
+                    {getExpiryText()}
+                </div>
+            )}
+        </div>
       </div>
     </motion.div>
   );
