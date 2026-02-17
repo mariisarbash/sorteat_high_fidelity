@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Search, X, Filter, ArrowDownAZ, CalendarDays, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Copio i dati dei coinquilini per coerenza
 const ROOMMATES = [
   { id: 'mari', initial: 'M', color: 'bg-pink-500' },
   { id: 'gio', initial: 'G', color: 'bg-blue-500' },
@@ -39,28 +38,32 @@ export default function InventoryHeader({
   };
 
   return (
-    <div className="px-5 pt-6 pb-2 bg-white sticky top-0 z-20">
+    // FIX 1: Cambiato bg-white in bg-[#F7F6F3]/95 (colore pagina) + blur.
+    // Rimosso il bordo inferiore per massima pulizia.
+    <div className="px-5 pt-6 pb-2 bg-[#F7F6F3]/95 backdrop-blur-sm sticky top-0 z-20 transition-all">
+      
       {/* HEADER ROW: Titolo e Bottone Filtro */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-[#1A1A1A]">Inventario</h1>
         
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border shadow-sm ${
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border shadow-sm relative ${
             showFilters || filterOwner !== 'all' || sortOption !== 'name'
               ? 'bg-[#1A1A1A] text-white border-transparent' 
               : 'bg-white text-gray-500 border-gray-200'
           }`}
         >
           <Filter className="w-5 h-5" />
-          {/* Pallino di notifica se ci sono filtri attivi */}
+          
+          {/* FIX 2: Pallino rosso riposizionato correttamente (top-2 right-2) */}
           {(filterOwner !== 'all' || sortOption !== 'name') && (
-            <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+            <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#1A1A1A]" />
           )}
         </button>
       </div>
 
-      {/* FILTERS PANEL (Collapsible) */}
+      {/* FILTERS PANEL */}
       <AnimatePresence>
         {showFilters && (
           <motion.div
@@ -80,7 +83,7 @@ export default function InventoryHeader({
                     className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                       sortOption === opt 
                         ? 'bg-[#3A5A40] text-white shadow-md' 
-                        : 'bg-[#F2F0E9] text-gray-600'
+                        : 'bg-white text-gray-600 border border-gray-200'
                     }`}
                   >
                     {getSortIcon(opt)}
@@ -135,7 +138,7 @@ export default function InventoryHeader({
               </div>
             </div>
             
-            <div className="h-px bg-gray-100 w-full" />
+            <div className="h-px bg-gray-200/50 w-full" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -150,7 +153,8 @@ export default function InventoryHeader({
           onChange={(e) => onSearchChange(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className={`w-full h-12 pl-12 pr-12 bg-[#F2F0E9] rounded-2xl text-sm text-[#1A1A1A] placeholder:text-gray-400 transition-all font-medium focus:outline-none ${
+          // Input sfondo bianco per contrasto leggero su sfondo pagina
+          className={`w-full h-12 pl-12 pr-12 bg-white rounded-2xl text-sm text-[#1A1A1A] placeholder:text-gray-400 transition-all font-medium focus:outline-none shadow-sm ${
             isFocused ? 'ring-2 ring-[#1A1A1A]/5' : ''
           }`}
         />
@@ -162,7 +166,7 @@ export default function InventoryHeader({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
               onClick={() => onSearchChange('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 bg-gray-200/80 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
             >
               <X className="w-3.5 h-3.5 text-gray-600" />
             </motion.button>

@@ -1,130 +1,84 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { X, Bell, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Notifiche di base (mock)
-const initialMockNotifications = [
-  {
-    id: 1,
-    title: 'Pile ha aggiunto Latte',
-    message: '2 minuti fa',
-    type: 'activity',
-    icon: '🥛',
-    iconBg: 'bg-blue-100'
-  },
-  {
-    id: 2,
-    title: 'Pollo in scadenza',
-    message: 'Scade domani - consumare subito',
-    type: 'expiry',
-    icon: '🍗',
-    iconBg: 'bg-[#D4A373]/20'
-  }
-];
+import { useProducts } from '../../context/ProductsContext';
 
 export default function NotificationsModal({ isOpen, onClose }) {
-  const [notifications, setNotifications] = useState([]);
-
-  // 1. CARICAMENTO INIZIALE E ASCOLTO EVENTI
-  useEffect(() => {
-    // Funzione per caricare da LocalStorage
-    const loadNotifications = () => {
-        const saved = localStorage.getItem('sorteat_notifications');
-        if (saved) {
-            setNotifications(JSON.parse(saved));
-        } else {
-            setNotifications(initialMockNotifications);
-        }
-    };
-
-    // Carica subito quando apri la modale
-    if (isOpen) {
-        loadNotifications();
-    }
-
-    // Listener per aggiornamenti in tempo reale (mentre la modale è aperta)
-    const handleNewNotification = (event) => {
-        // Ricarica tutto dal storage per essere sicuri
-        loadNotifications();
-    };
-
-    window.addEventListener('storage', loadNotifications); // Ascolta cambi storage
-    window.addEventListener('add-notification', handleNewNotification); // Ascolta evento custom
-
-    return () => {
-        window.removeEventListener('storage', loadNotifications);
-        window.removeEventListener('add-notification', handleNewNotification);
-    };
-  }, [isOpen]);
-
-  // Funzione per pulire
-  const clearNotifications = () => {
-    setNotifications([]);
-    localStorage.setItem('sorteat_notifications', JSON.stringify([]));
-  };
+  const { notifications, clearNotifications } = useProducts();
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
-            {/* BACKDROP SCURO */}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={onClose}
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
+          {/* BACKDROP */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.2 } }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto"
+          />
 
-            {/* CONTENUTO MODALE (Centrato/Basso) */}
-            <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="bg-white w-full sm:max-w-md h-[80vh] sm:h-auto sm:max-h-[85vh] sm:rounded-3xl rounded-t-3xl flex flex-col relative z-10 overflow-hidden"
-            >
+          {/* MODAL */}
+          <motion.div 
+            // STATO INIZIALE
+            initial={{ y: "100%", opacity: 0, scale: 0.95 }}
+            
+            // ENTRATA (Usa Spring/Molla per l'effetto rimbalzo piacevole)
+            animate={{ 
+              y: 0, 
+              opacity: 1, 
+              scale: 1,
+              transition: { type: "spring", damping: 25, stiffness: 300 }
+            }}
+            
+            // USCITA (Usa Tween/Lineare per essere VELOCE e non bloccarsi)
+            exit={{ 
+              y: "100%", 
+              opacity: 0, 
+              scale: 0.95,
+              transition: { duration: 0.2, ease: "easeIn" } // <--- QUESTO RISOLVE IL BLOCCO
+            }}
+            
+            className="bg-white w-[95%] sm:max-w-md rounded-3xl flex flex-col max-h-[85vh] pointer-events-auto relative z-10 mb-5 shadow-2xl overflow-hidden"
+          >
                 {/* HEADER */}
-                <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 bg-white shrink-0">
-                    <div className="flex items-center gap-2">
-                        <div className="p-2 bg-[#3A5A40]/10 rounded-full">
-                            <Bell className="w-5 h-5 text-[#3A5A40]" />
+                <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#3A5A40]/10 rounded-full flex items-center justify-center text-[#3A5A40]">
+                            <Bell className="w-5 h-5" />
                         </div>
-                        <h3 className="font-bold text-lg text-[#1A1A1A]">Notifiche</h3>
-                        {notifications.length > 0 && (
-                            <span className="bg-[#3A5A40] text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                                {notifications.length}
-                            </span>
-                        )}
+                        <div>
+                            <h2 className="text-xl font-bold text-[#1A1A1A]">Notifiche</h2>
+                            <p className="text-xs text-gray-500">
+                                {notifications.length > 0 ? `${notifications.length} nuove` : 'Nessuna nuova notifica'}
+                            </p>
+                        </div>
                     </div>
-                    <button 
-                        onClick={onClose}
-                        className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
-                    >
+                    <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
-                
-                {/* LISTA NOTIFICHE */}
-                <div className="flex-1 overflow-y-auto p-0">
+
+                {/* LIST */}
+                <div className="flex-1 overflow-y-auto p-5 bg-white">
                     {notifications.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-3">
-                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                                <Bell className="w-8 h-8 text-gray-300" />
-                            </div>
-                            <p className="text-gray-400 font-medium">Nessuna nuova notifica</p>
+                        <div className="flex flex-col items-center justify-center h-48 text-center text-gray-400">
+                            <Bell className="w-12 h-12 mb-3 opacity-20" />
+                            <p>Tutto tranquillo!</p>
                         </div>
                     ) : (
-                        <div className="divide-y divide-gray-50">
-                            {notifications.map((notification, index) => (
-                                <motion.div
+                        <div className="space-y-3">
+                            {notifications.map((notification) => (
+                                <motion.div 
                                     key={notification.id}
-                                    initial={{ opacity: 0, x: -20 }}
+                                    initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    className="px-6 py-4 flex items-start gap-4 active:bg-gray-50 transition-colors"
+                                    className={`p-4 rounded-2xl border flex items-start gap-4 ${
+                                        notification.type === 'expiry' ? 'bg-[#FFF8F0] border-orange-100' : 'bg-white border-gray-100 shadow-sm'
+                                    }`}
                                 >
-                                    <div className={`w-12 h-12 rounded-2xl ${notification.iconBg || 'bg-gray-100'} flex items-center justify-center text-2xl flex-shrink-0 shadow-sm`}>
+                                    <div className={`w-10 h-10 rounded-full ${notification.iconBg || 'bg-gray-100'} flex items-center justify-center text-2xl flex-shrink-0 shadow-sm`}>
                                         {notification.icon}
                                     </div>
                                     <div className="flex-1 min-w-0 pt-1">
@@ -140,7 +94,7 @@ export default function NotificationsModal({ isOpen, onClose }) {
                 
                 {/* FOOTER */}
                 {notifications.length > 0 && (
-                    <div className="p-5 border-t border-gray-50 bg-white">
+                    <div className="p-5 border-t border-gray-50 bg-white shrink-0">
                         <button 
                             onClick={clearNotifications}
                             className="w-full py-3 flex items-center justify-center gap-2 text-red-500 font-bold bg-red-50 hover:bg-red-100 rounded-2xl transition-colors"

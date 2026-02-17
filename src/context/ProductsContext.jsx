@@ -3,18 +3,18 @@ import { getDaysUntilExpiry } from '../utils/products';
 
 export { getDaysUntilExpiry };
 
-// --- DATI INIZIALI AGGIORNATI CON ARRAY OWNERS ---
+// --- DATI INIZIALI PRODOTTI (CON LOGICA OWNERS AGGIORNATA) ---
 const initialProducts = [
   { id: 1, name: 'Pollo', icon: '🍗', category: 'frigo', quantity: 500, unit: 'g', expiry_date: '2026-02-09', owners: ['mari'] },
-  { id: 2, name: 'Yogurt', icon: '🥛', category: 'frigo', quantity: 2, unit: 'vasetti', expiry_date: '2026-02-10', owners: ['mari', 'gio', 'pile'] }, // Era shared
+  { id: 2, name: 'Yogurt', icon: '🥛', category: 'frigo', quantity: 2, unit: 'vasetti', expiry_date: '2026-02-10', owners: ['mari', 'gio', 'pile'] },
   { id: 3, name: 'Spinaci', icon: '🥬', category: 'frigo', quantity: 200, unit: 'g', expiry_date: '2026-02-11', owners: ['gio'] },
   { id: 4, name: 'Latte', icon: '🥛', category: 'frigo', quantity: 1, unit: 'L', expiry_date: '2026-02-15', owners: ['mari', 'gio', 'pile'] },
   { id: 5, name: 'Uova', icon: '🥚', category: 'frigo', quantity: 6, unit: 'pz', expiry_date: '2026-02-20', owners: ['mari'] },
   { id: 6, name: 'Formaggio', icon: '🧀', category: 'frigo', quantity: 150, unit: 'g', expiry_date: '2026-02-18', owners: ['pile'] },
-  { id: 7, name: 'Burro', icon: '🧈', category: 'frigo', quantity: 250, unit: 'g', expiry_date: '2026-03-01', owners: ['mari', 'gio'] }, // Sottogruppo!
+  { id: 7, name: 'Burro', icon: '🧈', category: 'frigo', quantity: 250, unit: 'g', expiry_date: '2026-03-01', owners: ['mari', 'gio'] },
   { id: 8, name: 'Mozzarella', icon: '🧀', category: 'frigo', quantity: 125, unit: 'g', expiry_date: '2026-02-12', owners: ['mari'] },
   { id: 9, name: 'Pasta', icon: '🍝', category: 'dispensa', quantity: 2, unit: 'kg', expiry_date: '2027-06-01', owners: ['mari', 'gio', 'pile'] },
-  { id: 10, name: 'Riso', icon: '🍚', category: 'dispensa', quantity: 1, unit: 'kg', expiry_date: '2027-03-01', owners: ['mari', 'gio'] }, // Sottogruppo!
+  { id: 10, name: 'Riso', icon: '🍚', category: 'dispensa', quantity: 1, unit: 'kg', expiry_date: '2027-03-01', owners: ['mari', 'gio'] },
   { id: 11, name: 'Olio', icon: '🫒', category: 'dispensa', quantity: 750, unit: 'ml', expiry_date: '2027-01-01', owners: ['mari', 'gio', 'pile'] },
   { id: 12, name: 'Tonno', icon: '🐟', category: 'dispensa', quantity: 3, unit: 'lattine', expiry_date: '2027-12-01', owners: ['mari'] },
 ];
@@ -51,6 +51,26 @@ const initialMeals = [
   },
 ];
 
+// --- NUOVO: NOTIFICHE INIZIALI (Temporanee) ---
+const initialNotifications = [
+  {
+    id: 1,
+    title: 'Pile ha aggiunto Latte',
+    message: '2 minuti fa',
+    type: 'activity',
+    icon: '🥛',
+    iconBg: 'bg-blue-100'
+  },
+  {
+    id: 2,
+    title: 'Pollo in scadenza',
+    message: 'Scade domani - consumare subito',
+    type: 'expiry',
+    icon: '🍗',
+    iconBg: 'bg-[#D4A373]/20'
+  }
+];
+
 const ProductsContext = createContext(null);
 
 export function ProductsProvider({ children }) {
@@ -58,8 +78,11 @@ export function ProductsProvider({ children }) {
   const [shoppingList, setShoppingList] = useState(initialShoppingList);
   const [recipes, setRecipes] = useState(initialRecipes);
   const [meals, setMeals] = useState(initialMeals);
+  
+  // STATO NOTIFICHE (vive solo finché la pagina non viene aggiornata)
+  const [notifications, setNotifications] = useState(initialNotifications);
 
-  // --- LOGICHE CONVERSIONE E CONSUMO ---
+  // --- LOGICHE CONVERSIONE E CONSUMO (INVARIATE) ---
   const convertToBaseUnit = (qty, unit) => {
     const q = parseFloat(qty);
     if (isNaN(q)) return 0;
@@ -86,7 +109,6 @@ export function ProductsProvider({ children }) {
     
     if (!product) return { status: 'buy', productOwner: null }; 
 
-    // Se le unità non sono le stesse (es. kg vs g), convertiamo entrambi alla base
     let availableQty = parseFloat(product.quantity);
     let neededQty = parseFloat(requiredQty);
 
@@ -95,13 +117,14 @@ export function ProductsProvider({ children }) {
         neededQty = convertToBaseUnit(requiredQty, requiredUnit);
     }
 
-    if (availableQty < neededQty) return { status: 'buy', productOwner: product.owners[0] }; // Prendo il primo proprietario come riferimento
+    if (availableQty < neededQty) return { status: 'buy', productOwner: product.owners ? product.owners[0] : product.owner };
     
     // Controllo se 'mari' è tra i proprietari
-    const isOwner = product.owners && product.owners.includes('mari');
+    const owners = product.owners || (product.owner ? [product.owner] : ['shared']);
+    const isOwner = owners.includes('mari');
+    
     if (!isOwner) {
-        // Se non è proprietaria, ritorna il primo proprietario o una stringa 'shared' se tutti
-        const ownerDisplay = product.owners.length > 1 ? product.owners.join(' & ') : product.owners[0];
+        const ownerDisplay = owners.length > 1 ? owners.join(' & ') : owners[0];
         return { status: 'ask', productOwner: ownerDisplay };
     }
 
@@ -164,20 +187,17 @@ export function ProductsProvider({ children }) {
     setRecipes(prev => [...prev, { ...newRecipe, id: `r${Date.now()}` }]);
   };
 
-  // --- UPDATE ROBUSTO ---
   const updateProduct = (id, updatedFields) => {
     setProducts(prevProducts => 
       prevProducts.map(product => {
-        // Confronto "loose" (==) per gestire casi di id "1" (stringa) vs 1 (numero)
         if (product.id == id) {
-          // Manteniamo la compatibilità: se aggiorniamo 'owners', aggiorniamo anche 'owner' (singolare) per le card vecchie
+          // Mantieni compatibilità owners
           const newOwners = updatedFields.owners || product.owners;
-          const legacyOwner = newOwners.length > 2 ? 'shared' : newOwners[0]; // Fallback semplice
+          const legacyOwner = newOwners && newOwners.length > 2 ? 'shared' : (newOwners ? newOwners[0] : product.owner);
           
           return { 
               ...product, 
               ...updatedFields, 
-              // Assicuriamoci che owners sia sempre aggiornato
               owner: legacyOwner 
           }; 
         }
@@ -193,7 +213,6 @@ export function ProductsProvider({ children }) {
   const addProducts = (newProducts) => {
     const productsToAdd = Array.isArray(newProducts) ? newProducts : [newProducts];
     const formattedProducts = productsToAdd.map(p => {
-        // Gestione corretta dell'array owners
         const ownersList = p.owners && p.owners.length > 0 ? p.owners : ['mari'];
         
         return {
@@ -205,7 +224,7 @@ export function ProductsProvider({ children }) {
             unit: p.unit || 'pz',
             expiry_date: p.expiry_date || new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0],
             owners: ownersList,
-            owner: ownersList.length > 2 ? 'shared' : ownersList[0] // Legacy field
+            owner: ownersList.length > 2 ? 'shared' : ownersList[0]
         };
     });
     
@@ -227,6 +246,16 @@ export function ProductsProvider({ children }) {
     setShoppingList(prev => [...prev, ...formattedItems]);
   };
 
+  // --- NUOVE FUNZIONI NOTIFICHE ---
+  const addNotification = (notif) => {
+      const newNotif = { ...notif, id: Date.now() };
+      setNotifications(prev => [newNotif, ...prev]);
+  };
+
+  const clearNotifications = () => {
+      setNotifications([]);
+  };
+
   const restoreData = (prevProducts, prevShoppingList) => {
     if (prevProducts) setProducts(prevProducts);
     if (prevShoppingList) setShoppingList(prevShoppingList);
@@ -238,6 +267,9 @@ export function ProductsProvider({ children }) {
     setShoppingList,
     recipes,
     meals,
+    notifications, // Esposto
+    addNotification, // Esposto
+    clearNotifications, // Esposto
     addRecipe,
     updateProduct,
     removeProduct,

@@ -4,7 +4,7 @@ import { X, Trash2, Edit2, MessageCircle, AlertCircle, Check, Calendar, Plus, Mi
 import { useProducts } from '../../context/ProductsContext';
 import { useWaste } from '../../context/WasteContext';
 import { toast } from 'sonner';
-import OwnerSelector from '../spesa/OwnerSelector';
+import { OwnerSelector } from '../spesa/OwnerSelector'; // Fix import named
 
 const inventoryCategories = [
   { id: 'frigo', name: 'Frigo', icon: '❄️' },
@@ -16,27 +16,22 @@ const units = ['pz', 'g', 'kg', 'ml', 'L', 'confezione'];
 const commonEmojis = ['🍅', '🍌', '🥬', '🧀', '🥓', '🍞', '🍝', '🫒', '🧴', '🥛', '🍎', '🥚', '🍗', '📦'];
 
 export default function ProductDetailModal({ product, isOpen, onClose }) {
-  const { updateProduct, removeProduct } = useProducts();
+  // Ora destrutturiamo anche addNotification
+  const { updateProduct, removeProduct, addNotification } = useProducts();
   const { registerWaste } = useWaste();
   
   const [view, setView] = useState('detail');
   const [editForm, setEditForm] = useState(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
-  
-  // STATI UNIFICATI PER CHIEDI / CONSUMA
   const [actionQuantity, setActionQuantity] = useState(''); 
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     if (product) {
-      // FIX: Caricamento corretto degli owners.
-      // Se il prodotto ha la nuova prop 'owners', usa quella.
-      // Altrimenti fallback sulla vecchia logica 'owner' (per compatibilità o dati vecchi)
       let initialOwners = [];
       if (product.owners && Array.isArray(product.owners)) {
           initialOwners = product.owners;
       } else {
-          // Fallback legacy
           initialOwners = product.owner === 'shared' ? ['mari', 'gio', 'pile'] : [product.owner || 'mari'];
       }
 
@@ -46,11 +41,10 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
         quantity: product.quantity || 1,
         unit: product.unit || 'pz',
         category: product.category || 'frigo',
-        owners: initialOwners, // Usa l'array calcolato
+        owners: initialOwners,
         price: product.price || '',
         expiryDate: product.expiry_date || ''
       });
-      // Resetta stati
       setActionQuantity('');
       setIsAiLoading(false);
       setView('detail');
@@ -62,16 +56,13 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
   const currentCategory = inventoryCategories.find(c => c.id === product.category) || inventoryCategories[0];
   const isExpired = product.expiry_date && new Date(product.expiry_date) < new Date();
 
-  // Helper per visualizzare i proprietari nel dettaglio
   const getOwnerLabel = () => {
       const owners = product.owners || (product.owner === 'shared' ? ['mari', 'gio', 'pile'] : [product.owner]);
-      if (owners.length === 3) return 'Shared'; // O "Tutti"
+      if (owners.length === 3) return 'Shared';
       if (owners.length === 0) return 'Nessuno';
-      // Capitalizza i nomi
       return owners.map(o => o.charAt(0).toUpperCase() + o.slice(1)).join(' & ');
   };
 
-  // --- VALIDAZIONE ---
   const isQuantityValid = () => {
     if (!actionQuantity || actionQuantity === '') return false;
     const val = parseFloat(actionQuantity);
@@ -80,7 +71,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
     return true;
   };
 
-  // --- TASTI RAPIDI (Metà / Tutto) ---
   const handleSetAmount = (type) => {
     const total = parseFloat(product.quantity);
     if (type === 'half') {
@@ -91,7 +81,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
     }
   };
 
-  // --- MOCK AI UPDATE ---
   const handleAiUpdate = () => {
     setIsAiLoading(true);
     setTimeout(() => {
@@ -103,27 +92,22 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
     }, 1500);
   };
 
-  // --- SALVATAGGIO MODIFICHE ---
   const handleSaveEdit = () => {
     if (!editForm.name.trim()) {
         toast.error('Inserisci un nome per il prodotto');
         return;
     }
-
-    // CONTROLLO SICUREZZA: L'utente non può rimuovere se stesso ('mari')
     if (!editForm.owners.includes('mari')) {
         toast.error("Non puoi rimuoverti dalla proprietà del prodotto! 🚫");
         return;
     }
-    
-    // Aggiorna usando l'ID corretto e passando l'ARRAY owners
     updateProduct(product.id, {
         name: editForm.name,
         icon: editForm.icon,
         quantity: Number(editForm.quantity),
         unit: editForm.unit,
         category: editForm.category,
-        owners: editForm.owners, // Salva l'array così com'è (es. ['mari', 'gio'])
+        owners: editForm.owners,
         price: editForm.price,
         expiry_date: editForm.expiryDate
     });
@@ -132,9 +116,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
     onClose(product.id);
   };
 
-  // --- CONFERMA AZIONI ---
   const handleConfirmAction = () => {
-    // 1. ELIMINA
     if (view === 'delete') {
         const reason = isExpired ? 'scaduto' : 'buttato';
         registerWaste(product, product.quantity, product.unit, reason);
@@ -142,7 +124,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
         removeProduct(product.id);
         onClose(); 
     } 
-    // 2. CONSUMA
     else if (view === 'consume') {
         if (!isQuantityValid()) return;
         const consumed = parseFloat(actionQuantity);
@@ -159,7 +140,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
             onClose(product.id);
         }
     } 
-    // 3. CHIEDI
     else if (view === 'ask') {
         if (!isQuantityValid()) {
             toast.error("Inserisci una quantità valida");
@@ -170,23 +150,18 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
             pendingRequestDate: new Date().toISOString()
         });
         
-        // Calcola a chi stai chiedendo (escludendo te stesso)
         const targetOwner = product.owners 
             ? product.owners.filter(o => o !== 'mari').join(' & ') 
             : product.owner;
 
-        const newNotification = {
-            id: Date.now(),
+        // FIX: Usiamo la funzione del Context, non il LocalStorage!
+        addNotification({
             title: `Hai chiesto ${product.name}`,
             message: `Richiesta inviata a ${targetOwner} (${actionQuantity} ${product.unit})`,
             type: 'activity',
             icon: product.icon || '💬',
             iconBg: 'bg-yellow-100'
-        };
-        
-        const existingNotifications = JSON.parse(localStorage.getItem('sorteat_notifications') || '[]');
-        localStorage.setItem('sorteat_notifications', JSON.stringify([newNotification, ...existingNotifications]));
-        window.dispatchEvent(new CustomEvent('add-notification', { detail: newNotification }));
+        });
 
         toast.success(`Richiesta inviata a ${targetOwner}!`);
         onClose(product.id);
@@ -238,7 +213,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                             <p className="text-[#666666] flex items-center gap-2 mt-1">
                                 {currentCategory.icon} {currentCategory.name}
                             </p>
-                            {/* Visualizza i proprietari reali */}
                             <p className="text-xs text-blue-600 font-medium mt-1 bg-blue-50 inline-block px-2 py-1 rounded-lg">
                                 Di: {getOwnerLabel()}
                             </p>
@@ -263,7 +237,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
             {/* VISTA MODIFICA */}
             {view === 'edit' && (
                 <div className="space-y-8">
-                    {/* ... (Codice UI identico a prima per Nome/Icona/Quantità/Categoria) ... */}
                     <div className="space-y-3">
                         <label className="text-sm font-bold text-[#1A1A1A] ml-1">Cosa stai modificando?</label>
                         <div className="flex gap-3 relative">
@@ -355,7 +328,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                         </div>
                     </div>
 
-                    {/* PROPRIETARIO - Logica aggiornata */}
                     <div className="space-y-3">
                         <label className="text-sm font-bold text-[#1A1A1A] ml-1">Di chi è?</label>
                         <OwnerSelector 
@@ -392,7 +364,6 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                 </div>
             )}
             
-            {/* VISTA ASK / CONSUME / DELETE (Codice identico a prima, ometto per brevità ma è incluso nel file completo) */}
             {(view === 'ask' || view === 'consume') && (
                 <div className="space-y-6 text-center">
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${view === 'ask' ? 'bg-yellow-100' : 'bg-green-100'}`}>
@@ -470,7 +441,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
             )}
           </div>
 
-          {/* FOOTER BOTTONI (Identico a prima) */}
+          {/* FOOTER BOTTONI */}
           <div className="p-5 bg-white border-t border-gray-50 shrink-0">
             {view === 'detail' && (
                 <div className="flex gap-3">
@@ -481,7 +452,7 @@ export default function ProductDetailModal({ product, isOpen, onClose }) {
                         <Edit2 className="w-6 h-6" />
                     </button>
                     
-                    {/* Logica Chiedi: se NON sono proprietario */}
+                    {/* Logica Chiedi */}
                     {!(product.owners && product.owners.includes('mari')) ? (
                         product.hasPendingRequest ? (
                             <button disabled className="flex-1 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-lg bg-gray-100 text-gray-500 cursor-not-allowed opacity-60">
