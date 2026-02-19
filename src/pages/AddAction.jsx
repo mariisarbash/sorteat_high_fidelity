@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { X, Camera, Mic, ChefHat, PenLine } from 'lucide-react';
+import { X, Camera, Mic, PenLine, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function AddAction() {
@@ -20,9 +20,19 @@ export default function AddAction() {
       id: 'manual',
       icon: PenLine,
       label: 'Inserisci prodotto',
-      description: 'Aggiungi prodotti manualmente',
+      description: 'Aggiungi all\'inventario manualmente',
       color: 'bg-amber-500',
       page: 'ManualProductEntry'
+    },
+    {
+      id: 'spesa',
+      icon: ShoppingCart,
+      label: 'Aggiungi alla spesa',
+      description: 'Scrivi cosa devi comprare',
+      color: 'bg-[#3A5A40]',
+      page: 'Spesa',
+      // Passiamo questo stato per dire alla pagina Spesa di aprire subito il modale!
+      state: { openAddModal: true } 
     },
     {
       id: 'voice',
@@ -32,14 +42,6 @@ export default function AddAction() {
       color: 'bg-purple-500',
       page: 'VoiceInput'
     },
-    {
-      id: 'cook',
-      icon: ChefHat,
-      label: 'Svuota frigo',
-      description: 'Cucina con quello che hai',
-      color: 'bg-[#3A5A40]',
-      page: 'EmptyFridge'
-    }
   ];
 
   return (
@@ -53,10 +55,10 @@ export default function AddAction() {
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="bg-white w-full max-w-md rounded-t-3xl p-6 pb-10"
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="bg-white w-full max-w-md rounded-t-[2rem] p-6 pb-12"
       >
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center justify-between mb-8">
           <h2 className="text-xl font-bold text-[#1A1A1A]">Azione rapida</h2>
           <button
             onClick={() => navigate(-1)}
@@ -78,9 +80,10 @@ export default function AddAction() {
               >
                 <Link
                   to={createPageUrl(action.page)}
+                  state={action.state} // Passaggio dello stato critico!
                   className="flex items-center gap-4 p-4 bg-[#F2F0E9] rounded-2xl active:scale-[0.98] transition-transform"
                 >
-                  <div className={`w-14 h-14 rounded-2xl ${action.color} flex items-center justify-center`}>
+                  <div className={`w-14 h-14 rounded-2xl ${action.color} flex items-center justify-center shadow-sm`}>
                     <Icon className="w-7 h-7 text-white" />
                   </div>
                   <div className="flex-1">

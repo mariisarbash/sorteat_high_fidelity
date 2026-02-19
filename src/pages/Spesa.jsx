@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   ShoppingCart, 
@@ -28,6 +29,9 @@ const departments = [
 ];
 
 export default function Spesa() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   // FIX: Leggiamo la lista dal context globale, non locale!
   const { shoppingList, setShoppingList, addProducts } = useProducts(); 
   
@@ -42,6 +46,15 @@ export default function Spesa() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [deleteItem, setDeleteItem] = useState(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+  // 1. EFFETTO PER APRIRE IL MODALE IN AUTOMATICO DAL FAB
+  useEffect(() => {
+    if (location.state?.openAddModal) {
+      setIsAddModalOpen(true);
+      // Puliamo lo stato della history per evitare che il modale si riapra ricaricando la pagina
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   // Filtra items
   const filteredItems = useMemo(() => {

@@ -5,14 +5,14 @@ export { getDaysUntilExpiry };
 
 // --- DATI INIZIALI PRODOTTI (CON LOGICA OWNERS AGGIORNATA) ---
 const initialProducts = [
-  { id: 1, name: 'Pollo', icon: '🍗', category: 'frigo', quantity: 500, unit: 'g', expiry_date: '2026-02-09', owners: ['mari'] },
-  { id: 2, name: 'Yogurt', icon: '🥛', category: 'frigo', quantity: 2, unit: 'vasetti', expiry_date: '2026-02-10', owners: ['mari', 'gio', 'pile'] },
-  { id: 3, name: 'Spinaci', icon: '🥬', category: 'frigo', quantity: 200, unit: 'g', expiry_date: '2026-02-11', owners: ['gio'] },
-  { id: 4, name: 'Latte', icon: '🥛', category: 'frigo', quantity: 1, unit: 'L', expiry_date: '2026-02-15', owners: ['mari', 'gio', 'pile'] },
+  { id: 1, name: 'Pollo', icon: '🍗', category: 'frigo', quantity: 500, unit: 'g', expiry_date: '2026-02-18', owners: ['mari'] },
+  { id: 2, name: 'Yogurt', icon: '🥛', category: 'frigo', quantity: 2, unit: 'vasetti', expiry_date: '2026-02-19', owners: ['mari', 'gio', 'pile'] },
+  { id: 3, name: 'Spinaci', icon: '🥬', category: 'frigo', quantity: 200, unit: 'g', expiry_date: '2026-02-28', owners: ['gio'] },
+  { id: 4, name: 'Latte', icon: '🥛', category: 'frigo', quantity: 1, unit: 'L', expiry_date: '2026-02-21', owners: ['mari', 'gio', 'pile'] },
   { id: 5, name: 'Uova', icon: '🥚', category: 'frigo', quantity: 6, unit: 'pz', expiry_date: '2026-02-20', owners: ['mari'] },
-  { id: 6, name: 'Formaggio', icon: '🧀', category: 'frigo', quantity: 150, unit: 'g', expiry_date: '2026-02-18', owners: ['pile'] },
+  { id: 6, name: 'Formaggio', icon: '🧀', category: 'frigo', quantity: 150, unit: 'g', expiry_date: '2026-02-27', owners: ['gio', 'pile'] },
   { id: 7, name: 'Burro', icon: '🧈', category: 'frigo', quantity: 250, unit: 'g', expiry_date: '2026-03-01', owners: ['mari', 'gio'] },
-  { id: 8, name: 'Mozzarella', icon: '🧀', category: 'frigo', quantity: 125, unit: 'g', expiry_date: '2026-02-12', owners: ['mari'] },
+  { id: 8, name: 'Mozzarella', icon: '🧀', category: 'frigo', quantity: 125, unit: 'g', expiry_date: '2026-03-01', owners: ['mari'] },
   { id: 9, name: 'Pasta', icon: '🍝', category: 'dispensa', quantity: 2, unit: 'kg', expiry_date: '2027-06-01', owners: ['mari', 'gio', 'pile'] },
   { id: 10, name: 'Riso', icon: '🍚', category: 'dispensa', quantity: 1, unit: 'kg', expiry_date: '2027-03-01', owners: ['mari', 'gio'] },
   { id: 11, name: 'Olio', icon: '🫒', category: 'dispensa', quantity: 750, unit: 'ml', expiry_date: '2027-01-01', owners: ['mari', 'gio', 'pile'] },
@@ -20,7 +20,6 @@ const initialProducts = [
 ];
 
 const initialShoppingList = [
-  { id: 101, name: 'Detersivo', icon: '🧴', quantity: 1, unit: 'pz', department: 'casa', owners: ['mari', 'gio'], is_checked: false },
   { id: 102, name: 'Banane', icon: '🍌', quantity: 6, unit: 'pz', department: 'ortofrutta', owners: ['pile'], is_checked: false },
 ];
 
@@ -105,7 +104,14 @@ export function ProductsProvider({ children }) {
   };
 
   const checkIngredientAvailability = (ingName, requiredQty, requiredUnit) => {
-    const product = products.find(p => p.name.toLowerCase().includes(ingName.toLowerCase()));
+    // 1. Se l'ingrediente non ha un nome valido, diciamo subito di comprarlo
+    if (!ingName) return { status: 'buy', productOwner: null }; 
+
+    const product = products.find(p => {
+        // 2. Usiamo p.name? (optional chaining) nel caso in cui un prodotto in dispensa non abbia il nome
+        if (!p.name) return false;
+        return p.name.toLowerCase().includes(ingName.toLowerCase());
+    });
     
     if (!product) return { status: 'buy', productOwner: null }; 
 
@@ -119,7 +125,6 @@ export function ProductsProvider({ children }) {
 
     if (availableQty < neededQty) return { status: 'buy', productOwner: product.owners ? product.owners[0] : product.owner };
     
-    // Controllo se 'mari' è tra i proprietari
     const owners = product.owners || (product.owner ? [product.owner] : ['shared']);
     const isOwner = owners.includes('mari');
     

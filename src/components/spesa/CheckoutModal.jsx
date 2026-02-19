@@ -129,12 +129,13 @@ export default function CheckoutModal({ isOpen, onClose, checkedItems, onConfirm
                     <span className="text-xs text-gray-500">Tocca per modificare</span>
                 </div>
                 <div className="space-y-3">
-                    {finalItems.map(item => {
+                    {/* Aggiunto l'index al map per il fallback della key */}
+                    {finalItems.map((item, index) => {
                         const categoryInfo = inventoryCategories.find(c => c.id === item.finalCategory) || inventoryCategories[0];
                         
                         return (
                             <motion.div 
-                                key={item.id}
+                                key={item.id || `item-${index}`} // <- FIX APPLICATO QUI
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setEditingItem(item)}
                                 className="bg-white p-4 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4 cursor-pointer hover:border-[#3A5A40]/30 transition-colors"
@@ -252,7 +253,7 @@ function CheckoutItemEditModal({ item, isOpen, onClose, onSave }) {
                     </button>
                 </div>
 
-                {/* CORPO (Identico a ProductDetailModal > view='edit') */}
+                {/* CORPO */}
                 <div className="p-6 overflow-y-auto no-scrollbar flex-1 space-y-8">
                     
                     {/* NOME E ICONA */}

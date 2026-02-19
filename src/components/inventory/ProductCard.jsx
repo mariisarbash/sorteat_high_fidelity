@@ -24,16 +24,19 @@ export default function ProductCard({ product, index, onClick, isHighlighted, sh
   const getExpiryText = () => {
     if (daysLeft === null) return '';
     if (daysLeft <= 0) return 'Scaduto';
-    if (daysLeft === 1) return 'Domani';
-    return `${daysLeft}gg`; // "gg" salva spazio vitale nel quadratino
+    if (daysLeft === 1) return '1 giorno';
+    if (daysLeft === 2) return '2 giorni';
+    if (daysLeft === 3) return '3 giorni';
+    return `${daysLeft} giorni`;
   };
 
   const getExpiryStyle = () => {
     if (daysLeft === null) return '';
-    if (daysLeft <= 0) return 'bg-red-500 text-white border-red-500';
-    if (daysLeft === 1) return 'bg-red-100 text-red-700 border-red-100';
-    if (daysLeft <= 3) return 'bg-orange-100 text-orange-700 border-orange-100';
-    return 'bg-yellow-100 text-yellow-700 border-yellow-100';
+    if (daysLeft <= 0) return 'bg-red-500 text-white border-red-500';             // Scaduto: Rosso pieno
+    if (daysLeft === 1) return 'bg-red-100 text-red-700 border-red-100';          // 1 giorno: Rosso chiaro
+    if (daysLeft === 2) return 'bg-orange-100 text-orange-700 border-orange-100'; // 2 giorni: Arancione chiaro
+    if (daysLeft === 3) return 'bg-yellow-100 text-yellow-700 border-yellow-100'; // 3 giorni: Giallo chiaro
+    return 'bg-gray-100 text-gray-500 border-gray-100';                           // Oltre i 3 giorni
   };
 
   const productOwners = product.owners || (product.owner ? [product.owner] : ['shared']);
