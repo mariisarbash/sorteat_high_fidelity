@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Camera, Check, RefreshCw, Box, User, Save, Calendar, Plus, Minus } from 'lucide-react';
+import { X, Camera, Check, RefreshCw, Calendar, Plus, Minus } from 'lucide-react';
 import OwnerSelector from './OwnerSelector';
 import { useProducts } from '../../context/ProductsContext';
 import { toast } from 'sonner';

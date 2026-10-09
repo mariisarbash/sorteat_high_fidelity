@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, X } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName }) {
   if (!isOpen) return null;

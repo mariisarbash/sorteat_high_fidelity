@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Clock, Users, Search, ChevronRight, Save, Trash2, Check, Minus } from 'lucide-react';
+import { X, Plus, Clock, Users, ChevronRight, Trash2, Check, Minus } from 'lucide-react';
 import { useProducts } from '../../context/ProductsContext';
 import { toast } from 'sonner';
 // FIX IMPORT: Parentesi graffe per named export

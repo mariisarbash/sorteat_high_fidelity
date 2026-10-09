@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Users, AlertCircle, Check, ShoppingCart, MessageCircle, RefreshCw } from 'lucide-react';
+import { X, Clock, AlertCircle, Check, ShoppingCart, MessageCircle, RefreshCw } from 'lucide-react';
 import { useProducts } from '../../context/ProductsContext';
 import { toast } from 'sonner';
 // FIX 3: Importo l'AvatarStack per mostrare i coinquilini
@@ -75,9 +75,12 @@ export default function RecipeDetailModal({ meal, isOpen, onClose, onRemove, onR
                 <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 bg-white/50 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white transition-colors z-10">
                     <X className="w-5 h-5 text-gray-700" />
                 </button>
-                <button onClick={onReplace} className="absolute top-3 left-3 px-3 py-1.5 bg-white/50 backdrop-blur-md rounded-xl flex items-center gap-2 text-sm font-medium text-gray-700 hover:bg-white transition-colors z-10">
-                    <RefreshCw className="w-4 h-4" /> Cambia
-                </button>
+                {/* Solo chi gestisce il calendario (MealStream) passa onReplace. */}
+                {onReplace && (
+                    <button onClick={onReplace} className="absolute top-3 left-3 px-3 py-1.5 bg-white/50 backdrop-blur-md rounded-xl flex items-center gap-2 text-sm font-medium text-gray-700 hover:bg-white transition-colors z-10">
+                        <RefreshCw className="w-4 h-4" /> Cambia
+                    </button>
+                )}
             </div>
 
             <div className="flex-1 overflow-y-auto">
@@ -158,7 +161,9 @@ export default function RecipeDetailModal({ meal, isOpen, onClose, onRemove, onR
             </div>
 
             <div className="p-4 border-t border-gray-100 bg-white shrink-0 flex gap-3">
-                <button onClick={onRemove} className="p-4 rounded-2xl border-2 border-red-100 text-red-500 hover:bg-red-50 transition-colors font-bold"><X className="w-5 h-5" /></button>
+                {onRemove && (
+                    <button onClick={onRemove} className="p-4 rounded-2xl border-2 border-red-100 text-red-500 hover:bg-red-50 transition-colors font-bold"><X className="w-5 h-5" /></button>
+                )}
                 <button 
                     onClick={handleCook}
                     disabled={!canCook}

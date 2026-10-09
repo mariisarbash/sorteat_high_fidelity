@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Users, X, ChefHat, ShoppingCart, Clock, Sparkles, Check } from 'lucide-react';
+import { Plus, Clock, Sparkles, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import RecipeDetailModal from './RecipeDetailModal';

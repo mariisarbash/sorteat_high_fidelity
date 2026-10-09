@@ -1,7 +1,9 @@
-import React from 'react';
-import { Sun, Cloud, Coffee, Cookie, Moon, Utensils } from 'lucide-react';
+import React, { useState } from 'react';
+import { Coffee, Cookie, Moon, Utensils } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { useProducts } from '../../context/ProductsContext';
+import RecipeDetailModal from './RecipeDetailModal';
 
 const getTimeContext = () => {
   const hour = new Date().getHours();
@@ -36,6 +38,8 @@ const mealContexts = {
     iconColor: 'text-green-700',
     title: 'Pasta al pesto',
     subtitle: 'Pranzo programmato per oggi',
+    // Punta al pasto reale di oggi nel calendario (vedi ProductsContext).
+    mealType: 'pranzo',
     emoji: '🍝',
     details: '25 min • 2 persone',
     decorations: ['🌿', '🧀', '🍝'],
@@ -50,6 +54,7 @@ const mealContexts = {
     iconColor: 'text-green-700',
     title: 'Pasta al pesto',
     subtitle: 'È ora di pranzo!',
+    mealType: 'pranzo',
     emoji: '🍝',
     details: '25 min • 2 persone',
     decorations: ['🌿', '🧀', '🍝'],
@@ -77,6 +82,7 @@ const mealContexts = {
     iconColor: 'text-violet-700',
     title: 'Carbonara',
     subtitle: 'Cena per stasera',
+    mealType: 'cena',
     emoji: '🍝',
     details: '30 min • 2 persone',
     decorations: ['🥚', '🧀', '🥓'],
@@ -104,6 +110,25 @@ export default function MealTimeWidget() {
   const context = mealContexts[timeContext];
   const Icon = context.icon;
 
+  const { meals } = useProducts();
+  const [openMeal, setOpenMeal] = useState(null);
+
+  // Il pasto di oggi (day 0) corrispondente alla fascia oraria, se pianificato.
+  const todaysMeal = context.mealType
+    ? meals.find((m) => m.day === 0 && m.type === context.mealType)
+    : null;
+
+  // Apre il dettaglio ricetta già esistente (lo stesso di MealStream).
+  // Senza onRemove/onReplace il modale è in sola lettura: niente azioni sul
+  // calendario da una card di suggerimento.
+  const openRecipe = () => {
+    if (todaysMeal) {
+      setOpenMeal(todaysMeal);
+    } else {
+      toast.success('Funzionalità in arrivo!', { icon: '🚀' });
+    }
+  };
+
   const handleAction = (action) => {
     switch (action) {
       case 'confirm':
@@ -113,10 +138,8 @@ export default function MealTimeWidget() {
         toast('Cosa preferisci invece?', { icon: '🤔' });
         break;
       case 'ingredients':
-        toast.success('Funzionalità in arrivo!', { icon: '🚀' });
-        break;
       case 'recipe':
-        toast.success('Funzionalità in arrivo!', { icon: '🚀' });
+        openRecipe();
         break;
       case 'discover':
         toast.success('Funzionalità in arrivo!', { icon: '🚀' });
@@ -173,6 +196,12 @@ export default function MealTimeWidget() {
           </div>
         </div>
       </div>
+
+      <RecipeDetailModal
+        meal={openMeal}
+        isOpen={!!openMeal}
+        onClose={() => setOpenMeal(null)}
+      />
     </motion.div>
   );
 }

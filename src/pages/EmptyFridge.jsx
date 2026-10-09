@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { createPageUrl } from '../utils';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Clock, Users, ChefHat } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast, Toaster } from 'sonner';

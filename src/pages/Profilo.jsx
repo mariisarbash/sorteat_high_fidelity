@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, QrCode, Settings, LogOut, Leaf, Award, Edit2, Plus, Users, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, QrCode, Settings, LogOut, Leaf, Award, Edit2, Plus, Home } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast, Toaster } from 'sonner';
 

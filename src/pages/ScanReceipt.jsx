@@ -4,6 +4,7 @@ import { Camera, Trash2, ChevronLeft, Check, ShoppingBag, Edit2, X, Minus, Plus 
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast, Toaster } from 'sonner';
 import { useProducts } from '../context/ProductsContext';
+import { daysFromToday } from '../utils/products';
 import { OwnerSelector } from '../components/spesa/OwnerSelector';
 
 // --- DATI COSTANTI ---
@@ -218,12 +219,14 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
 };
 
 // --- MOCK DATA ---
+// Dates are relative so a simulated receipt always scans in fresh groceries,
+// never a basket that already reads as expired. See utils/products.
 const mockScannedProducts = [
-  { id: 1, name: 'Latte Intero 1L', icon: '🥛', quantity: 2, unit: 'pz', price: 1.89, category: 'frigo', owners: ['mari'], expiry_date: '2026-02-22' },
-  { id: 2, name: 'Pane Integrale', icon: '🍞', quantity: 1, unit: 'pz', price: 2.50, category: 'dispensa', owners: ['mari'], expiry_date: '2026-02-12' },
-  { id: 3, name: 'Mele Fuji', icon: '🍎', quantity: 6, unit: 'pz', price: 3.20, category: 'frigo', owners: ['mari'], expiry_date: '2026-02-18' },
-  { id: 4, name: 'Pasta Barilla 500g', icon: '🍝', quantity: 2, unit: 'pz', price: 1.45, category: 'dispensa', owners: ['mari'], expiry_date: '2027-03-01' },
-  { id: 5, name: 'Yogurt Greco', icon: '🥄', quantity: 4, unit: 'pz', price: 3.60, category: 'frigo', owners: ['mari'], expiry_date: '2026-02-15' },
+  { id: 1, name: 'Latte Intero 1L', icon: '🥛', quantity: 2, unit: 'pz', price: 1.89, category: 'frigo', owners: ['mari'], expiry_date: daysFromToday(5) },
+  { id: 2, name: 'Pane Integrale', icon: '🍞', quantity: 1, unit: 'pz', price: 2.50, category: 'dispensa', owners: ['mari'], expiry_date: daysFromToday(3) },
+  { id: 3, name: 'Mele Fuji', icon: '🍎', quantity: 6, unit: 'pz', price: 3.20, category: 'frigo', owners: ['mari'], expiry_date: daysFromToday(12) },
+  { id: 4, name: 'Pasta Barilla 500g', icon: '🍝', quantity: 2, unit: 'pz', price: 1.45, category: 'dispensa', owners: ['mari'], expiry_date: daysFromToday(400) },
+  { id: 5, name: 'Yogurt Greco', icon: '🥄', quantity: 4, unit: 'pz', price: 3.60, category: 'frigo', owners: ['mari'], expiry_date: daysFromToday(9) },
 ];
 
 export default function ScanReceipt() {

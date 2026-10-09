@@ -1,22 +1,24 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
-import { getDaysUntilExpiry } from '../utils/products'; 
+import { getDaysUntilExpiry, daysFromToday } from '../utils/products';
 
 export { getDaysUntilExpiry };
 
 // --- DATI INIZIALI PRODOTTI (CON LOGICA OWNERS AGGIORNATA) ---
+// Offsets chosen so the fridge always demos the full range of expiry states:
+// one expired, then 1 / 2 / 3 days (red, orange, yellow), then fresh items.
 const initialProducts = [
-  { id: 1, name: 'Pollo', icon: '🍗', category: 'frigo', quantity: 500, unit: 'g', expiry_date: '2026-02-18', owners: ['mari'] },
-  { id: 2, name: 'Yogurt', icon: '🥛', category: 'frigo', quantity: 2, unit: 'vasetti', expiry_date: '2026-02-19', owners: ['mari', 'gio', 'pile'] },
-  { id: 3, name: 'Spinaci', icon: '🥬', category: 'frigo', quantity: 200, unit: 'g', expiry_date: '2026-02-28', owners: ['gio'] },
-  { id: 4, name: 'Latte', icon: '🥛', category: 'frigo', quantity: 1, unit: 'L', expiry_date: '2026-02-21', owners: ['mari', 'gio', 'pile'] },
-  { id: 5, name: 'Uova', icon: '🥚', category: 'frigo', quantity: 6, unit: 'pz', expiry_date: '2026-02-20', owners: ['mari'] },
-  { id: 6, name: 'Formaggio', icon: '🧀', category: 'frigo', quantity: 150, unit: 'g', expiry_date: '2026-02-27', owners: ['gio', 'pile'] },
-  { id: 7, name: 'Burro', icon: '🧈', category: 'frigo', quantity: 250, unit: 'g', expiry_date: '2026-03-01', owners: ['mari', 'gio'] },
-  { id: 8, name: 'Mozzarella', icon: '🧀', category: 'frigo', quantity: 125, unit: 'g', expiry_date: '2026-03-01', owners: ['mari'] },
-  { id: 9, name: 'Pasta', icon: '🍝', category: 'dispensa', quantity: 2, unit: 'kg', expiry_date: '2027-06-01', owners: ['mari', 'gio', 'pile'] },
-  { id: 10, name: 'Riso', icon: '🍚', category: 'dispensa', quantity: 1, unit: 'kg', expiry_date: '2027-03-01', owners: ['mari', 'gio'] },
-  { id: 11, name: 'Olio', icon: '🫒', category: 'dispensa', quantity: 750, unit: 'ml', expiry_date: '2027-01-01', owners: ['mari', 'gio', 'pile'] },
-  { id: 12, name: 'Tonno', icon: '🐟', category: 'dispensa', quantity: 3, unit: 'lattine', expiry_date: '2027-12-01', owners: ['mari'] },
+  { id: 1, name: 'Pollo', icon: '🍗', category: 'frigo', quantity: 500, unit: 'g', expiry_date: daysFromToday(0), owners: ['mari'] },
+  { id: 2, name: 'Yogurt', icon: '🥛', category: 'frigo', quantity: 2, unit: 'vasetti', expiry_date: daysFromToday(-2), owners: ['mari', 'gio', 'pile'] },
+  { id: 3, name: 'Spinaci', icon: '🥬', category: 'frigo', quantity: 200, unit: 'g', expiry_date: daysFromToday(4), owners: ['gio'] },
+  { id: 4, name: 'Latte', icon: '🥛', category: 'frigo', quantity: 1, unit: 'L', expiry_date: daysFromToday(1), owners: ['mari', 'gio', 'pile'] },
+  { id: 5, name: 'Uova', icon: '🥚', category: 'frigo', quantity: 6, unit: 'pz', expiry_date: daysFromToday(2), owners: ['mari'] },
+  { id: 6, name: 'Formaggio', icon: '🧀', category: 'frigo', quantity: 150, unit: 'g', expiry_date: daysFromToday(7), owners: ['gio', 'pile'] },
+  { id: 7, name: 'Burro', icon: '🧈', category: 'frigo', quantity: 250, unit: 'g', expiry_date: daysFromToday(11), owners: ['mari', 'gio'] },
+  { id: 8, name: 'Mozzarella', icon: '🧀', category: 'frigo', quantity: 125, unit: 'g', expiry_date: daysFromToday(15), owners: ['mari'] },
+  { id: 9, name: 'Pasta', icon: '🍝', category: 'dispensa', quantity: 2, unit: 'kg', expiry_date: daysFromToday(400), owners: ['mari', 'gio', 'pile'] },
+  { id: 10, name: 'Riso', icon: '🍚', category: 'dispensa', quantity: 1, unit: 'kg', expiry_date: daysFromToday(300), owners: ['mari', 'gio'] },
+  { id: 11, name: 'Olio', icon: '🫒', category: 'dispensa', quantity: 750, unit: 'ml', expiry_date: daysFromToday(240), owners: ['mari', 'gio', 'pile'] },
+  { id: 12, name: 'Tonno', icon: '🐟', category: 'dispensa', quantity: 3, unit: 'lattine', expiry_date: daysFromToday(600), owners: ['mari'] },
 ];
 
 const initialShoppingList = [

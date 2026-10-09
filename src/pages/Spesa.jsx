@@ -8,14 +8,11 @@ import {
   ChevronUp,
   Trash2,
   Check,
-  Filter,
-  CheckCheck,
-  Circle,
-  X 
+  Filter 
 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import AvatarStack from '../components/spesa/AvatarStack';
-import OwnerSelector, { ROOMMATES } from '../components/spesa/OwnerSelector';
+import { ROOMMATES } from '../components/spesa/OwnerSelector';
 import ShoppingItemDetail from '../components/spesa/ShoppingItemDetail';
 import DeleteConfirmModal from '../components/spesa/DeleteConfirmModal';
 import CheckoutModal from '../components/spesa/CheckoutModal';
