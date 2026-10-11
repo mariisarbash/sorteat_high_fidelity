@@ -54,24 +54,34 @@ Three entry points: **manual entry** (full form), **receipt scanning** and **voi
 
 ## HCI process
 
-Built as a university Human-Computer Interaction course project.
+Sorteat was a six-person team project (*BitBuilders*) for the Human-Computer Interaction course at Politecnico di Milano, A.Y. 2025/26. The research and design process was collaborative:
 
-- **Five-month** project
-- **Six-person** academic team
 - **Semi-structured interviews** for needfinding
 - **2 in-person focus groups**
-- **Iterative prototyping**, from wireframes to this high-fidelity build
-- **Nielsen heuristic evaluation**
-- **Usability testing**
-- **Final average SUS score: 89/100**
+- **Iterative prototyping**: low-fidelity wireframes, then a mid-fidelity Figma prototype, then this high-fidelity build
+- **Nielsen heuristic evaluation**, received from a peer team and used to redesign the prototype (the team also evaluated another team's project)
+- **Usability testing** with **11 participants**
+
+**Average usability score: SUS 89/100. Final academic project grade: 30/30 cum laude.**
+Both results belong to the team project as a whole.
+
+The full process, the deliverables and the team's commit history are preserved in the original project:
+
+- **[Final HCI project website](https://porkyphoenix091.github.io/BitBuilders/)**
+- **[Original team repository](https://github.com/PorkyPhoenix091/BitBuilders)**
 
 ---
 
 ## My contribution
 
-Drove the product concept, UX/UI direction and high-fidelity prototype implementation within a six-person HCI course project.
+I was the sole human developer of the Sorteat high-fidelity React application, built as part of a six-person Human-Computer Interaction project at Politecnico di Milano. The app was started from a [Base44](https://base44.com) project, an AI-assisted app-building platform, and Base44's SDK and Vite plugin are still part of the build (see *Tech stack*).
 
-The research, evaluation and course deliverables were team work — see the [project website](https://github.com/mariisarbash/sorteat_website) for the full team and the stage-by-stage process.
+- **Team leader** of the BitBuilders academic team
+- **Product ideation and UX/UI design**, from the concept to the high-fidelity interface
+- **Moderated 7 of the 11 usability testing sessions**
+- **Maintained the team repository and project website**
+
+The research, the evaluations and the other course deliverables were team work by all six members.
 
 ---
 
@@ -95,7 +105,7 @@ This is a **design prototype**, scoped deliberately. Stated plainly so nothing h
 
 - **Receipt scanning is simulated.** The flow mimics a camera capture and returns a predefined set of products. There is **no OCR and no image processing**.
 - **Voice input is simulated.** It animates a fixed, hardcoded phrase. There is **no speech recognition and no audio capture**.
-- **No AI or machine learning of any kind.** No model inference, no external AI services.
+- **No AI or machine learning features in the app.** At runtime there is no model inference and no call to an external AI service.
 - **Data is mock data held in memory.** State lives in React Context, seeded with sample products, meals and a shopping list. **Changes are lost on page reload** — there is no backend, no database and no persistence.
 - **Single simulated user.** The app acts as one flatmate ("Mari"); the others exist as data, not as real accounts. There is no authentication.
 - Some secondary actions are placeholders that surface a *"coming soon"* message rather than a built flow.
@@ -116,6 +126,7 @@ This is a **design prototype**, scoped deliberately. Stated plainly so nothing h
 | **Icons** | Lucide |
 | **Notifications** | Sonner |
 | **Charts** | Recharts |
+| **Scaffolding** | Base44 project template: `@base44/sdk` and `@base44/vite-plugin` are still dependencies (legacy auth and navigation wiring). The prototype's data is local mock data only. |
 
 ```
 src/
@@ -156,4 +167,5 @@ The app runs at `http://localhost:5173`.
 
 ## Related
 
-- **[sorteat_website](https://github.com/mariisarbash/sorteat_website)** — the project's companion site: the full six-person team and the course deliverables, from needfinding through to this prototype.
+- **[BitBuilders: final project website](https://porkyphoenix091.github.io/BitBuilders/)** · **[team repository](https://github.com/PorkyPhoenix091/BitBuilders)**: the six-person team's original HCI project, with the research, prototypes, evaluations, usability testing and full contribution history.
+- [sorteat_website](https://github.com/mariisarbash/sorteat_website): an earlier personal snapshot of the project website (November 2025), kept for reference.
