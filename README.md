@@ -76,12 +76,33 @@ The full process, the deliverables and the team's commit history are preserved i
 
 I was the sole human developer of the Sorteat high-fidelity React application, built as part of a six-person Human-Computer Interaction project at Politecnico di Milano. The app was started from a [Base44](https://base44.com) project, an AI-assisted app-building platform, and Base44's SDK and Vite plugin are still part of the build (see *Tech stack*).
 
-- **Team leader** of the BitBuilders academic team
 - **Product ideation and UX/UI design**, from the concept to the high-fidelity interface
-- **Moderated 7 of the 11 usability testing sessions**
+- **Team leader** of the BitBuilders academic team; **moderated 7 of the 11 usability testing sessions**
+- **Visual identity**: digitally hand-illustrated the original Sorteat logo, which is also the app icon
+- **Presentations and storytelling**: wrote and designed all of the team's academic presentations, structuring how the research, design decisions and results were communicated at each deliverable
 - **Maintained the team repository and project website**
 
 The research, the evaluations and the other course deliverables were team work by all six members.
+
+### Visual identity & storytelling
+
+![Sorteat logo: illustrated stacked food containers, a simplified line-art app icon and the two-tone "sort/eat" wordmark](docs/branding/logo-variations.jpg)
+
+*The original Sorteat logo, hand-drawn digitally: stacked food containers in two illustrated renderings, a simplified line-art app icon, and the two-tone* sort·eat *wordmark. [Logo artwork (PDF)](docs/branding/sorteat-logo.pdf)*
+
+Across the course deliverables I used food as a running metaphor for how the product developed. Ingredients are collected, then prepared, then served, then the table is set:
+
+| 01 Discovery | 02 Design |
+|---|---|
+| ![Ingredients falling into a basket](docs/storytelling/01-discovery-genesi.jpg) | ![Chopped vegetables falling into a pan](docs/storytelling/02-design-progettazione.jpg) |
+| Ingredients collected | Ingredients prepared |
+
+| 03 Refinement | 04 Testing |
+|---|---|
+| ![Dishes landing on a table](docs/storytelling/03-refinement-raffinamento.jpg) | ![A fully set table with cutlery](docs/storytelling/04-testing-user-testing.jpg) |
+| Dishes come together | A complete meal |
+
+*Section slides from the final presentation, 19 February 2026 ([PDF](docs/storytelling/presentazione-finale-section-slides.pdf)). The concept, compositions, layout and copy are mine. The food photographs are existing image assets, not my own photography or illustration.*
 
 ---
 
